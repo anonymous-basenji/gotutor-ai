@@ -5,6 +5,8 @@
 }
 
 .home-page {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     min-height: 100vh;
     overflow-y: auto;
@@ -13,6 +15,14 @@
     padding: 0;
     background: linear-gradient(45deg, #29005b, #3a004c);
     font-family: 'Roboto', sans-serif;
+
+    .main-content {
+        display: flex;
+        flex-grow: 1;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
 
     .title {
         font-family: 'Orbitron', sans-serif;
@@ -24,6 +34,14 @@
         margin-left: 0;
         margin-right: auto;
         display: flex;
+    }
+
+    .catchphrase {
+        font-family: 'Orbitron', sans-serif;
+    }
+
+    .sign-in-btn {
+        background-color: rgb(31, 0, 204);
     }
 
     @media (max-width: 768px) {
