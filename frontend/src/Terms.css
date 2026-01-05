@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css?family=Orbitron');
+
+.terms-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 10px;
+    width: 100%;
+}
+
+.terms-container h1 {
+    font-family: 'Orbitron', sans-serif;
+    text-align: center;
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.terms-container .date {
+    display: block;
+    text-align: center;
+    font-family: 'Roboto', sans-serif;
+    margin-bottom: 50px;
+}
+
+.terms-container h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #a180ff; /* The purple accent */
+    text-align: center;
+    border-bottom: 1px solid rgba(161, 128, 255, 0.3);
+    padding-bottom: 10px;
+    margin-top: 40px;
+}
+
+.terms-container p {
+    line-height: 1.6;
+    margin: 20px 0;
+    text-align: center; /* Keep intro/headers centered */
+}
+
+.terms-container ul {
+    list-style-type: disc;
+    margin: 20px auto;
+    padding-left: 40px;
+    max-width: 90%;
+    text-align: left; /* FIX: Legal bullets MUST be left-aligned */
+}
+
+.terms-container li {
+    margin-bottom: 15px;
+}
