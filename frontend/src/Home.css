@@ -44,6 +44,10 @@
         background-color: rgb(31, 0, 204);
     }
 
+    .create-acc-btn {
+        background-color: #607D8B;
+    }
+
     @media (max-width: 768px) {
         .title {
             font-size: 30px;

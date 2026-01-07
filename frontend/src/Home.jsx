@@ -16,7 +16,9 @@ function Home() {
                 <h1 className='catchphrase'>
                     Your private tutor, on demand.
                 </h1>
-                <button className='sign-in-btn' onClick={() => navigate('/sign-in')}>Create Account or Sign In</button>
+                <button className='sign-in-btn' onClick={() => navigate('/sign-in')}>Sign In</button>
+                <p>or</p>
+                <button className='create-acc-btn' onClick={() => navigate('/sign-in')}>Create Account</button>
                 <br></br>
                 <br></br>
                 <br></br>
