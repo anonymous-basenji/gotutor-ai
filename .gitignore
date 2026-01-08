@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+**/.env
+**/.env.test
+**/.env.production
+**/coverage/
+Thumbs.db
+**/build/
+**/node_modules/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
