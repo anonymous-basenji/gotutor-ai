@@ -1,0 +1,41 @@
+* {
+    box-sizing: border-box;
+}
+
+.sign-in-screen {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(45deg, #29005b, #3a004c);
+    justify-content: center;
+    font-family: 'Roboto', sans-serif;
+
+    .sign-in-card {
+        background: rgb(0, 25, 52);
+        padding: 20px;
+        margin: 0px auto;
+        border-radius: 30px;
+    }
+
+    .sign-in-h1 {
+        opacity: 90%;
+    }
+
+    .student-btn {
+        background-color: rgb(31, 0, 204);
+    }
+
+    .supervisor-btn {
+        background-color: #607D8B;
+    }
+    
+
+    @media (max-width: 768px) {
+        
+    }
+}
