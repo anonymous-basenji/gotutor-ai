@@ -10,6 +10,8 @@ function SignIn() {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             setUser(result.user);
+            console.log("user is ");
+            console.log(user);
         } catch (error) {
             console.error("Error signing in with Google", error);
         }
@@ -19,12 +21,9 @@ function SignIn() {
         <div className='sign-in-screen'>
             <div className='sign-in-card'>
                 <h1 className='sign-in-h1'>Choose an option to sign in</h1>
-                <button className='student-btn'>Student Sign-In</button>
+                <button className='student-btn' onClick={handleGoogleSignIn}>Sign-In With Google</button>
                 <br></br>
                 <br></br>
-                <p>Supervisors/Teachers/Parents:</p>
-                <button className='supervisor-btn' onClick={handleGoogleSignIn}>Sign in with Google</button>
-                {user && <p>Signed in as: {user.displayName}</p>}
             </div>
             <br></br>
             <br></br>

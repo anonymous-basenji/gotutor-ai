@@ -10,7 +10,6 @@ function App() {
     <Routes>
       <Route path='/' element={<Home />}/>
       <Route path='/sign-in' element={<SignIn/>}/>
-      <Route path='/supervisor-sign-in' element={<SupervisorSignIn/>}/>
       <Route path='/terms-of-service' element={<Terms/>}/>
     </Routes>
   );
