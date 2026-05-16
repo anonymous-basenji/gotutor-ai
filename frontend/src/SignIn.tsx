@@ -1,17 +1,26 @@
-import { useState } from 'react';
-import { signInWithPopup, type User } from 'firebase/auth';
+import { useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from './firebase-config';
+import { UserContext } from './UserProvider';
 import './SignIn.css';
 
 function SignIn() {
-    const [user, setUser] = useState<User | null>(null);
+    const userCtx = useContext(UserContext);
+    const navigate = useNavigate();
 
     const handleGoogleSignIn = async() => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
-            setUser(result.user);
+            const user = result.user;
+
+            userCtx?.setUser(user);
             console.log("user is ");
             console.log(user);
+
+            if(user) {
+                navigate('/user-dashboard');
+            }
         } catch (error) {
             console.error("Error signing in with Google", error);
         }

@@ -4,8 +4,8 @@ import './Terms.css';
 function Terms() {
     return(
         <div className="terms-container">
-            <h1>Terms of Service</h1>
-            <p className="effective-date">Effective Date: January 5, 2026</p>
+            <h1>NULL - DO NOT USE Terms of Service</h1>
+            <p className="effective-date">Effective Date: Never</p>
 
             <section>
                 <h2>1. Account Types and Eligibility</h2>
@@ -55,7 +55,7 @@ function Terms() {
 
             <section>
                 <h2>7. Contact Information</h2>
-                <p>Questions regarding these Terms should be directed to: <strong>andrew.v.sklyarov@gmail.com</strong></p>
+                <p>Questions regarding these Terms should be directed to: <strong>help.gotutor.ai@gmail.com</strong></p>
             </section>
         </div>
     );

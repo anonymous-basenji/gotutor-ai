@@ -1,0 +1,8 @@
+.user-dashboard {
+    background: linear-gradient(45deg, rgb(12, 0, 146), rgb(110, 0, 161));
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+}
