@@ -5,7 +5,7 @@ function UserDashboardSignedIn({ user }: { user: User }) {
 
     return(
         <div className='user-dashboard'>
-            <p>haha, you're a user! And your name is {user.displayName}! Haha!</p>
+            <h1>Welcome, {user.displayName}</h1>
         </div>
     ); 
 };
