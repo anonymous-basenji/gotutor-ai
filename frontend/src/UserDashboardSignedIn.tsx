@@ -1,11 +1,16 @@
 import { type User } from 'firebase/auth';
+import ClassCard from './ClassCard';
 import './UserDashboard.css';
 
 function UserDashboardSignedIn({ user }: { user: User }) {
 
     return(
         <div className='user-dashboard'>
-            <p>haha, you're a user! And your name is {user.displayName}! Haha!</p>
+            <h1>Welcome, {user.displayName}</h1>
+            <h2>Your classes:</h2>
+            <div className='classes-display-container'>
+                
+            </div>
         </div>
     ); 
 };
