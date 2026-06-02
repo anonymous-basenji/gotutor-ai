@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserContext } from './UserProvider';
+import { UserContext } from '../UserProvider';
+import SignedOut from '../SignedOut';
 import UserDashboardSignedIn from './UserDashboardSignedIn';
 import './UserDashboard.css';
 
@@ -14,7 +15,7 @@ function UserDashboard() {
                 // Add your dashboard content here when user is authenticated
                 <UserDashboardSignedIn user={userCtx.user}/>
             ) : 
-                <p>Whoops! It appears that you are signed out. Please go back to the <a onClick={() => navigate('/sign-in')}>sign-in page</a> and sign in with a valid account.</p>
+                <SignedOut nav={navigate}/>
             }
         </div>
     ); 
