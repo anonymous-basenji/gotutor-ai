@@ -49,12 +49,11 @@ This is a private project. Setup instructions are available internally only (if 
 - A Supabase project for the PostgreSQL database
 - A Firebase project for authentication
 - An OpenRouter API key for the AI tutor
-- Environment variables configured for both the client and server — see `.env.example` files in each directory
+- Environment variables configured for both the client and server
 
 ---
 
 ## Notes
 
 - All AI conversation history is stored per student per class, so each student has their own personal tutor context
-- Supervisors must be 18 or older — enforced during signup
-- Never expose the Supabase service role key on the frontend
+- Supervisors must be 18 or older (enforced during signup)
