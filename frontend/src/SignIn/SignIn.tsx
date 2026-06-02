@@ -1,8 +1,8 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from './firebase-config';
-import { UserContext } from './UserProvider';
+import { auth, googleProvider } from '../firebase-config';
+import { UserContext } from '../UserProvider';
 import './SignIn.css';
 
 function SignIn() {
