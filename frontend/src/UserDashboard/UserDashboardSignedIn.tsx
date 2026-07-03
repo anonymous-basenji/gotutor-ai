@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { type User } from 'firebase/auth';
+import { type User } from '@supabase/supabase-js';
 import ClassCard from './ClassCard';
 import './UserDashboard.css';
 
@@ -11,10 +11,11 @@ interface ClassVisual {
 
 function UserDashboardSignedIn({ user }: { user: User }) {
     const [classes, setClasses] = useState<ClassVisual[]>([]);
+    const name = user.user_metadata?.full_name || user.email || "User";
 
     return(
         <div className='user-dashboard'>
-            <h1>Welcome, {user.displayName}</h1>
+            <h1>Welcome, {name}</h1>
             <h2>Your classes:</h2>
             <div className='classes-display-container'>
                 {classes.map(cls => (

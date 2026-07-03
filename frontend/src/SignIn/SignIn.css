@@ -29,13 +29,11 @@
     .student-btn {
         background-color: rgb(31, 0, 204);
     }
-
-    .supervisor-btn {
-        background-color: #607D8B;
-    }
     
 
     @media (max-width: 768px) {
-        
+        .sign-in-card {
+            margin: 10px;
+        }
     }
 }
