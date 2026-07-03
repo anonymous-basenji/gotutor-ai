@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "tsx watch --env-file=../.env index.ts",
+    "start": "tsx --env-file=../.env index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,7 +16,8 @@
     "@supabase/supabase-js": "^2.106.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "firebase-admin": "^13.10.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

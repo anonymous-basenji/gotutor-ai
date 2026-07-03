@@ -1,18 +1,19 @@
-import dotenv from "dotenv";
 import express, { type Request, type Response } from "express";
 import cors from "cors";
+import authRouter from './routes/auth';
 import { supabase } from './db';
 
-dotenv.config();
-
-const app = express();
+export const app = express();
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.VITE_FRONTEND_URL,
 }));
 
 app.use(express.json());
 
-const PORT = 3000;
+app.use('/auth', authRouter);
+
+export const PORT = 3000;
+
 
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
