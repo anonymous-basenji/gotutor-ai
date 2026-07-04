@@ -69,6 +69,11 @@ router.post("/sync-user", async (req: Request, res: Response) => {
             .select();
 
         if (upsertError) {
+            if (upsertError.code === '23505') {
+                // Duplicate email — user already exists under a different auth account
+                console.error('Duplicate email conflict:', upsertError.details);
+                return res.status(409).json({ error: 'An account with this email already exists' });
+            }
             console.error('Upsert error:', upsertError);
             return res.status(500).json({ error: 'Failed to create user' });
         }

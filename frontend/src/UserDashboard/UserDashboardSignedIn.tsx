@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { type User } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 import ClassCard from './ClassCard';
+import UserBadge from '../UserBadge/UserBadge';
 import './UserDashboard.css';
 
 interface ClassVisual {
@@ -11,10 +13,12 @@ interface ClassVisual {
 
 function UserDashboardSignedIn({ user }: { user: User }) {
     const [classes, setClasses] = useState<ClassVisual[]>([]);
+    const navigate = useNavigate();
     const name = user.user_metadata?.full_name || user.email || "User";
 
     return(
         <div className='user-dashboard'>
+            <UserBadge/>
             <h1>Welcome, {name}</h1>
             <h2>Your classes:</h2>
             <div className='classes-display-container'>
