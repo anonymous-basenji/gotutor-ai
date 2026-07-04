@@ -18,8 +18,7 @@ function UserDashboardSignedIn({ user }: { user: User }) {
     const name = user.user_metadata?.full_name || user.email || "User";
 
     const handleCreateClass = async (className: string) => {
-        // TODO: Implement backend API integration to store this class
-        console.log("Creating class:", className);
+        
         
         // Optimistically add it to UI for demonstration purposes
         const newClass: ClassVisual = {
