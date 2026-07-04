@@ -87,4 +87,34 @@ router.post("/sync-user", async (req: Request, res: Response) => {
 
 });
 
+// backend/routes/auth.ts
+router.get("/me", async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+
+        const { data, error: dbError } = await supabase
+            .from('User')
+            .select('name, date_of_birth, email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (dbError || !data) return res.status(404).json({ error: 'Profile not found' });
+
+        return res.status(200).json({
+            ...data,
+            isAdult: calculateAge(new Date(data.date_of_birth)) >= 18
+        });
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+});
+
 export default router;

@@ -9,25 +9,6 @@ interface UserContextType {
     isAdult: boolean | null;
 }
 
-const calculateAge = (birthDate: Date) => {
-    const currentDate: Date = new Date();
-
-    // 1. Calculate the raw difference in years
-    let age = currentDate.getFullYear() - birthDate.getFullYear();
-
-    // 2. Calculate the difference in months
-    const monthDiff = currentDate.getMonth() - birthDate.getMonth();
-
-    // 3. Adjust if the birthday hasn't happened yet this year
-    // Condition: Current month is before birth month OR
-    // (It is the birth month, but the current day is before the birth day)
-    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < birthDate.getDate())) {
-        age--;
-    }
-
-    return age;
-};
-
 export const UserContext = createContext<UserContextType | null>(null);
 
 function UserProvider({ children }: { children: React.ReactNode }) {
@@ -47,21 +28,31 @@ function UserProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        if (!user) return;
-        supabase
-            .from('User')
-            .select('date_of_birth')
-            .eq('user_id', user.id)
-            .maybeSingle()
-            .then(({ data }) => {
-                if (!data?.date_of_birth) {
-                    setIsAdult(null);
-                    return;
-                }
-                const dob = new Date(data.date_of_birth);
-                const age = calculateAge(dob);
-                setIsAdult(age >= 18);
+        if(!user) {
+            setIsAdult(null);
+            return;
+        }
+
+        const fetchMe = async() => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if(!token) return;
+
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            if (!response.ok) {
+                console.error(`HTTP error at /auth/me: ${response.status}`);
+                return;
+            }
+
+            const data = await response.json();
+            setIsAdult(data.isAdult);
+        }
+        
+        fetchMe();
     }, [user]);
 
     return(
