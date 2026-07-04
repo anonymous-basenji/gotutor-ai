@@ -19,6 +19,7 @@ function UserDashboardSignedIn({ user }: { user: User }) {
     return(
         <div className='user-dashboard'>
             <UserBadge/>
+            <button className='add-cls-btn'>+ Add Class</button>
             <h1>Welcome, {name}</h1>
             <h2>Your classes:</h2>
             <div className='classes-display-container'>
