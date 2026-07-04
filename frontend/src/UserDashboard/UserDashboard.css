@@ -17,20 +17,6 @@
     min-height: 70vh;
 }
 
-.sign-out-btn {
-    background-color: rgb(38, 0, 255);
-    position: absolute;
-    top: 30px;
-    right: 30px;
-    border-radius: 30px;
-    box-shadow: 0 4px 5px rgba(0, 0, 0, 0.3);
-}
-
-.sign-out-btn:hover {
-    background-color: rgb(24, 0, 161);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
 @media (max-width: 680px) {
     .classes-display-container {
         width: 85vw;

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { type User } from '@supabase/supabase-js';
-import { supabase } from '../SupabaseClient';
 import { useNavigate } from 'react-router-dom';
 import ClassCard from './ClassCard';
+import UserBadge from '../UserBadge/UserBadge';
 import './UserDashboard.css';
 
 interface ClassVisual {
@@ -16,14 +16,9 @@ function UserDashboardSignedIn({ user }: { user: User }) {
     const navigate = useNavigate();
     const name = user.user_metadata?.full_name || user.email || "User";
 
-    const handleSignOut = async() => {
-        await supabase.auth.signOut();
-        navigate('/sign-in');
-    }
-
     return(
         <div className='user-dashboard'>
-            <button className="sign-out-btn" onClick={handleSignOut}>Sign-out</button>
+            <UserBadge/>
             <h1>Welcome, {name}</h1>
             <h2>Your classes:</h2>
             <div className='classes-display-container'>
