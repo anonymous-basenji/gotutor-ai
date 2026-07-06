@@ -105,6 +105,84 @@ router.get("/get-classes", async(req: Request, res: Response) => {
     return res.status(200).json(result);
 });
 
+router.get("/get-class/:id", async(req: Request, res: Response) => {
+    const classId = req.params.id;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+    let user_id: string;
+
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) return res.status(401).json({ error: 'Invalid or expired token' });
+        user_id = user.id;
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { data: memberCheck, error: memberCheckError } = await supabase
+        .from('UserClass')
+        .select('role')
+        .eq('user_id', user_id)
+        .eq('class_id', classId)
+        .maybeSingle();
+
+    if (memberCheckError) {
+        console.error(memberCheckError);
+        return res.status(500).json({ error: 'Failed to verify class membership' });
+    }
+
+    if (!memberCheck) {
+        return res.status(403).json({ error: 'Access denied: You are not a member of this class' });
+    }
+
+    const { data: classData, error: classDataError } = await supabase
+        .from('Class')
+        .select('name')
+        .eq('class_id', classId)
+        .maybeSingle();
+
+    if (classDataError || !classData) {
+        return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const { data: members, error: membersError } = await supabase
+        .from('UserClass')
+        .select('role, user_id, User(name, email)')
+        .eq('class_id', classId);
+
+    if (membersError) {
+        console.error(membersError);
+        return res.status(500).json({ error: 'Failed to fetch class members' });
+    }
+
+    const supervisors = members
+        .filter(m => m.role === 'supervisor')
+        .map(m => ({
+            user_id: m.user_id,
+            name: (m.User as any)?.name ?? 'Unknown',
+            email: (m.User as any)?.email ?? 'Unknown'
+        }));
+
+    const students = members
+        .filter(m => m.role === 'student')
+        .map(m => ({
+            user_id: m.user_id,
+            name: (m.User as any)?.name ?? 'Unknown',
+            email: (m.User as any)?.email ?? 'Unknown'
+        }));
+
+    return res.status(200).json({
+        class_id: classId,
+        name: classData.name,
+        supervisors,
+        students
+    });
+});
 
 router.post("/add-user-to-class", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
