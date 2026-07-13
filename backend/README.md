@@ -19,8 +19,9 @@ backend/
 ├── index.ts            # Express app setup, CORS, route mounting, server start
 ├── db.ts               # Supabase client initialization & TypeScript interfaces
 ├── routes/
-│   ├── auth.ts         # User registration (sync-user) & profile retrieval
-│   └── classes.ts      # Class CRUD, membership, and roster queries
+│   ├── auth.ts             # User registration (sync-user) & profile retrieval
+│   ├── classes.ts          # Class CRUD, membership, and roster queries
+│   └── conversations.ts   # Fetch conversations for a user within a class
 ├── package.json
 └── tsconfig.json
 ```
@@ -257,6 +258,39 @@ Adds the authenticated user to a class with a given role. Uses upsert with `igno
 | ------ | ----------- |
 | `201`  | User added — returns the `UserClass` row |
 | `400`  | Missing `class_id` or invalid `role` (must be `supervisor` or `student`) |
+| `401`  | Missing or invalid token |
+| `500`  | Server error |
+
+---
+
+### Conversations — `/conversations`
+
+#### `GET /conversations?class_id=<id>`
+
+Returns all conversations for the authenticated user within a specific class.
+
+**Query Parameters:**
+
+| Param      | Type     | Required | Description        |
+| ---------- | -------- | -------- | ------------------ |
+| `class_id` | `number` | Yes      | The class to filter by |
+
+**Response (200):**
+
+```json
+[
+  {
+    "conversation_id": 1,
+    "student_id": "abc-123",
+    "class_id": 5,
+    "started_at": "2026-07-06T12:00:00Z"
+  }
+]
+```
+
+| Status | Description |
+| ------ | ----------- |
+| `200`  | Array of conversations (may be empty) |
 | `401`  | Missing or invalid token |
 | `500`  | Server error |
 
