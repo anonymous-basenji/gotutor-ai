@@ -25,3 +25,7 @@ dist-ssr
 
 # ENVIRONMENT VARIABLES
 .env
+
+# React Router v7 generated files
+.react-router
+build

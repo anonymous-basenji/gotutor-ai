@@ -1,6 +1,8 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
 import authRouter from './routes/auth';
+import classesRouter from './routes/classes';
+import conversationsRouter from './routes/conversations';
 import { supabase } from './db';
 
 export const app = express();
@@ -11,6 +13,8 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/auth', authRouter);
+app.use('/classes', classesRouter);
+app.use('/conversations', conversationsRouter);
 
 export const PORT = 3000;
 
