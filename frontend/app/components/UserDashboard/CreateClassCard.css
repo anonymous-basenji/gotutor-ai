@@ -1,0 +1,114 @@
+.create-class-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    min-height: 10vh;
+    margin-top: 10px;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.create-class-card.placeholder {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-style: dashed;
+}
+
+.create-class-card.placeholder:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(110, 0, 161, 0.3);
+}
+
+.create-class-card h3 {
+    margin: 0 0 10px 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.create-class-card .plus-icon {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 5px;
+    transition: transform 0.2s ease;
+}
+
+.create-class-card.placeholder:hover .plus-icon {
+    transform: scale(1.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.create-class-card.active {
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.class-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.class-input:focus {
+    border-color: rgb(110, 0, 161);
+    box-shadow: 0 0 8px rgba(110, 0, 161, 0.4);
+}
+
+.card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.card-actions button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-btn {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.submit-btn {
+    background: rgb(38, 0, 255);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(38, 0, 255, 0.3);
+}
+
+.submit-btn:hover:not(:disabled) {
+    background: rgb(24, 0, 161);
+    box-shadow: 0 4px 12px rgba(38, 0, 255, 0.5);
+}
+
+.submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}

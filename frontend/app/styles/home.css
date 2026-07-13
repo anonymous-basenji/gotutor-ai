@@ -1,0 +1,70 @@
+* {
+    box-sizing: border-box;
+}
+
+.home-page {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(45deg, rgb(12, 0, 146), rgb(110, 0, 161));
+    font-family: 'Roboto', sans-serif;
+
+    .main-content {
+        display: flex;
+        flex-grow: 1;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .title {
+        font-family: 'Orbitron', sans-serif;
+        margin: 15px;
+    }
+
+    .top-bar {
+        margin-top: 0;
+        margin-left: 0;
+        margin-right: auto;
+        display: flex;
+    }
+
+    .catchphrase {
+        font-family: 'Orbitron', sans-serif;
+    }
+
+    .sign-in-btn {
+        background-color: rgb(31, 0, 204);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        padding: 0.6em 1.2em;
+        font-size: 1em;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        transition: border-color 0.25s, background-color 0.25s;
+        display: inline-block;
+    }
+
+    .sign-in-btn:hover {
+        border-color: #646cff;
+        background-color: rgb(24, 0, 161);
+    }
+
+    .create-acc-btn {
+        background-color: #607D8B;
+    }
+
+    @media (max-width: 768px) {
+        .title {
+            font-size: 30px;
+        }
+    }
+}
