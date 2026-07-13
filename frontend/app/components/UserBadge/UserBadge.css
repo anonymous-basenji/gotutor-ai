@@ -1,0 +1,30 @@
+.user-badge {
+    display: flex;
+    flex-direction: row;
+    background-color: rgb(29, 29, 29);
+    border-radius: 30px;
+    height: 45px;
+    width: fit-content;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+p {
+    color: white;
+    margin-left: 10px;
+}
+
+.sign-out-btn {
+    background-color: rgb(38, 0, 255);
+    height: 45px;
+    border-radius: 30px;
+}
+
+.sign-out-btn:hover {
+    background-color: rgb(24, 0, 161);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}

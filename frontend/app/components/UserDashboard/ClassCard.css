@@ -1,0 +1,25 @@
+.class-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.class-card {
+    background: rgba(255, 255, 255, 0.07);
+    border: 3px rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    min-height: 10vh;
+    margin: 0 auto;
+    margin-top: 10px;
+    padding: 10px;
+    text-align: left;
+
+    h2 {
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+.class-card:hover {
+    background: rgba(136, 136, 136, 0.07);
+}
