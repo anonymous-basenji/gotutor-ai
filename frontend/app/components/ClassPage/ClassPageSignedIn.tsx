@@ -59,7 +59,7 @@ function ClassPageSignedIn({ clsData, userName }: { clsData: ClassData | null, u
             <UserBadge />
             <h1>{clsData.name}</h1>
             <h3>Welcome to your course, {userName}:</h3>
-            <button className="back-btn" onClick={() => navigate('/user-dashboard')}>← Back to Classes</button>
+            <button className="back-btn" onClick={() => navigate('/user-dashboard')}>← Back to Dashboard</button>
             <div className='conversations-container'>
                 <h2>Your conversations: </h2>
                 {conversations.map(cnv => (
