@@ -38,6 +38,11 @@ function AgeForm({ user, onComplete }: { user: User | null | undefined, onComple
             } else {
                 if(response.status === 403) {
                     alert("Error: Users under the age of 13 cannot create an account at this time.");
+                    await supabase.auth.signOut();
+                    window.location.reload();
+                } else if(response.status === 401) {
+                    await supabase.auth.signOut();
+                    window.location.reload();
                 }
                 console.error("Failed to sync user to database");
             };

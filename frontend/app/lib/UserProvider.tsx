@@ -45,6 +45,9 @@ function UserProvider({ children }: { children: React.ReactNode }) {
 
             if (!response.ok) {
                 console.error(`HTTP error at /auth/me: ${response.status}`);
+                if (response.status === 401) {
+                    await supabase.auth.signOut();
+                }
                 return;
             }
 
