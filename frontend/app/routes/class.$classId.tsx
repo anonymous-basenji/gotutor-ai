@@ -50,6 +50,7 @@ export default function ClassPage() {
                 if (response.ok) {
                     const data: ClassData = await response.json();
                     setClsData(data);
+                    document.title = `${data.name} - GoTutor.ai`;
                 }
             } catch (error) {
                 console.error('Failed to fetch class data', error);
