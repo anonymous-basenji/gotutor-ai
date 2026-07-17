@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { ClassData } from "../../routes/class.$classId";
 import { supabase } from '../../lib/SupabaseClient';
-import UserBadge  from '../../components/UserBadge/UserBadge';
+import { useNavigate } from 'react-router';
+import UserBadge from '../../components/UserBadge/UserBadge';
 import ConversationCard from './ConversationCard';
 import './ClassPage.css'
 
@@ -14,6 +15,7 @@ interface Conversation {
 
 function ClassPageSignedIn({ clsData, userName }: { clsData: ClassData | null, userName: string }) {
     const [conversations, setConversations] = useState<Conversation[]>([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (!clsData) return;
@@ -57,7 +59,7 @@ function ClassPageSignedIn({ clsData, userName }: { clsData: ClassData | null, u
             <UserBadge />
             <h1>{clsData.name}</h1>
             <h3>Welcome to your course, {userName}:</h3>
-            <button className="back-btn">← Back to Classes</button>
+            <button className="back-btn" onClick={() => navigate('/user-dashboard')}>← Back to Classes</button>
             <div className='conversations-container'>
                 <h2>Your conversations: </h2>
                 {conversations.map(cnv => (
