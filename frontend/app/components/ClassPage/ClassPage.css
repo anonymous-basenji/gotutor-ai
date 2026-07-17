@@ -17,6 +17,17 @@
     min-height: 70vh;
 }
 
+.back-btn {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    background-color: rgb(116, 0, 204);
+}
+
+.back-btn:hover {
+    background-color: rgba(116, 0, 204, 0.668);
+}
+
 @media (max-width: 680px) {
     .conversations-container {
         width: 85vw;

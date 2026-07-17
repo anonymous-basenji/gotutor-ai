@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ClassData } from "../../routes/class.$classId";
 import { supabase } from '../../lib/SupabaseClient';
+import UserBadge  from '../../components/UserBadge/UserBadge';
 import ConversationCard from './ConversationCard';
 import './ClassPage.css'
 
@@ -53,8 +54,10 @@ function ClassPageSignedIn({ clsData, userName }: { clsData: ClassData | null, u
 
     return(
         <div className='class-page'>
+            <UserBadge />
             <h1>{clsData.name}</h1>
             <h3>Welcome to your course, {userName}:</h3>
+            <button className="back-btn">← Back to Classes</button>
             <div className='conversations-container'>
                 <h2>Your conversations: </h2>
                 {conversations.map(cnv => (
