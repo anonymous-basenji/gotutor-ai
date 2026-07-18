@@ -66,10 +66,12 @@ export default function ClassPage() {
 
     const name = user.user_metadata?.full_name || user.email || "User";
 
+    const isSupervisor = clsData?.supervisors.some(s => s.user_id === user?.id) || false;
+
     return(
         <div>
             {userCtx?.user ? (
-                <ClassPageSignedIn clsData={clsData} userName={name}/>
+                <ClassPageSignedIn clsData={clsData} userName={name} isSupervisor={isSupervisor} currUserId={user?.id}/>
             ) : 
                 <SignedOut nav={navigate}/>
             }

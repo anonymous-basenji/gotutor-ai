@@ -7,14 +7,158 @@
     overflow-y: auto;
 }
 
+.class-page-header {
+    text-align: center;
+    margin-top: 4rem;
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.class-page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.class-page-header h3 {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.class-page-layout {
+    display: flex;
+    max-width: 1200px;
+    margin: 0 auto 4rem auto;
+    padding: 0 2rem;
+    gap: 2.5rem;
+    align-items: flex-start;
+}
+
 .conversations-container {
-    background: none;
-    margin: 0 auto;
-    border-radius: 10px;
-    padding: 10px;
-    position: relative;
-    width: 60vw;
-    min-height: 70vh;
+    flex: 2;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    min-height: auto;
+}
+
+.conversations-container h2 {
+    color: white;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+.no-conversations-msg {
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+.members-container {
+    flex: 1.2;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    color: white;
+}
+
+.members-section {
+    margin-bottom: 2.5rem;
+}
+
+.members-section:last-child {
+    margin-bottom: 0;
+}
+
+.members-section h2 {
+    font-size: 1.3rem;
+    margin-top: 0;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 0.5rem;
+}
+
+.members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.member-card {
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.member-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.supervisor-card .member-avatar {
+    background: linear-gradient(135deg, #ff7b00, #ffae00);
+}
+
+.student-card .member-avatar {
+    background: linear-gradient(135deg, #00b4db, #0083b0);
+}
+
+.member-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    overflow: hidden;
+}
+
+.member-name {
+    font-weight: 500;
+    font-size: 1rem;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.member-email {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.no-members-msg {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+    font-style: italic;
 }
 
 .back-btn {
@@ -22,14 +166,40 @@
     top: 1rem;
     left: 1rem;
     background-color: rgb(116, 0, 204);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
 }
 
 .back-btn:hover {
     background-color: rgba(116, 0, 204, 0.668);
 }
 
-@media (max-width: 680px) {
-    .conversations-container {
-        width: 85vw;
+@media (max-width: 1024px) {
+    .class-page-layout {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0 1rem;
+        gap: 1.5rem;
     }
+    
+    .conversations-container, .members-container {
+        flex: none;
+        width: auto;
+    }
+}
+
+.student-card.clickable, .supervisor-card.clickable {
+    cursor: pointer;
+}
+
+.member-card.active-card {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
 }
