@@ -305,3 +305,32 @@
     color: rgba(255, 255, 255, 0.35);
     cursor: not-allowed;
 }
+
+.student-card {
+    position: relative;
+}
+
+.remove-student-btn {
+    position: absolute;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.student-card:hover .remove-student-btn {
+    opacity: 1;
+}
+
+.remove-student-btn:hover {
+    color: #ff4a4a;
+}

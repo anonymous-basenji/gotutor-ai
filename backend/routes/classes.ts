@@ -286,4 +286,48 @@ router.post("/add-student-by-email", async(req: Request, res: Response) => {
     return res.status(201).json({ message: 'Student successfully added' });
 })
 
+router.delete("/remove-student", async(req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    let requester_id: string;
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) return res.status(401).json({ error: 'Invalid token' });
+        requester_id = user.id;
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { class_id, student_id } = req.body;
+
+    const { data: supervisorCheck, error: supervisorError } = await supabase
+        .from('UserClass')
+        .select('role')
+        .eq('user_id', requester_id)
+        .eq('class_id', class_id)
+        .eq('role', 'supervisor')
+        .maybeSingle();
+
+    if (supervisorError || !supervisorCheck) {
+        return res.status(403).json({ error: 'Access denied: Only supervisors can remove students' });
+    }
+
+    const { error: deleteError } = await supabase
+        .from('UserClass')
+        .delete()
+        .eq('user_id', student_id)
+        .eq('class_id', class_id)
+        .eq('role', 'student');
+
+    if (deleteError) {
+        console.error(deleteError);
+        return res.status(500).json({ error: 'Failed to remove student' });
+    }
+
+    return res.status(200).json({ message: 'Student successfully removed' });
+});
+
 export default router;

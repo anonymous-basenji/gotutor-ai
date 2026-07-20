@@ -21,8 +21,11 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
     const [selectedMember, setSelectedMember] = useState<ClassMember | null>(null);
     const navigate = useNavigate();
 
+    if(!clsData) {
+        return;
+    }
+
     const fetchConversations = async (studentId?: string) => {
-        if (!clsData) return;
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
@@ -51,8 +54,6 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
     };
 
     useEffect(() => {
-        if (!clsData) return;
-
         setSupervisors(clsData.supervisors);
         setStudents(clsData.students);
 
@@ -75,6 +76,36 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         if (!isSupervisor) return;
         setSelectedMember(member);
         fetchConversations(member.user_id);
+    };
+
+    const handleRemoveClick = async (e: React.MouseEvent, student: ClassMember) => {
+        e.stopPropagation();
+        if (window.confirm(`Are you sure you want to remove ${student.name} from this class?`)) {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            try {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/remove-student`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ class_id: clsData.class_id, student_id: student.user_id })
+                });
+
+                if (response.ok) {
+                    if (selectedMember?.user_id === student.user_id) {
+                        setSelectedMember(null);
+                        setConversations([]);
+                    }
+                    if (onRefresh) onRefresh();
+                } else {
+                    console.error('Failed to remove student');
+                }
+            } catch (err) {
+                console.error('Error removing student:', err);
+            }
+        }
     };
 
     if (!clsData) {
@@ -160,6 +191,15 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                                             </p>
                                             <p className='member-email'>{member.email}</p>
                                         </div>
+                                        {isSupervisor && (
+                                            <button 
+                                                className='remove-student-btn' 
+                                                onClick={(e) => handleRemoveClick(e, member)}
+                                                title='Remove student'
+                                            >
+                                                ×
+                                            </button>
+                                        )}
                                     </div>
                                 );
                             })}
