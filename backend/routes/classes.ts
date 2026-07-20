@@ -330,4 +330,71 @@ router.delete("/remove-student", async(req: Request, res: Response) => {
     return res.status(200).json({ message: 'Student successfully removed' });
 });
 
+router.delete("/delete-class", async (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    let user_id: string;
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) return res.status(401).json({ error: 'Invalid token' });
+        user_id = user.id;
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { class_id } = req.body;
+    if (!class_id) {
+        return res.status(400).json({ error: 'class_id is required' });
+    }
+
+    // 1. Verify user is a supervisor of the class
+    const { data: supervisorCheck, error: supervisorError } = await supabase
+        .from('UserClass')
+        .select('role')
+        .eq('user_id', user_id)
+        .eq('class_id', class_id)
+        .eq('role', 'supervisor')
+        .maybeSingle();
+
+    if (supervisorError || !supervisorCheck) {
+        return res.status(403).json({ error: 'Access denied: Only supervisors can delete a class' });
+    }
+
+    try {
+        // 2. Fetch conversations to delete their messages first (for constraint safety)
+        const { data: conversations } = await supabase
+            .from('Conversation')
+            .select('conversation_id')
+            .eq('class_id', class_id);
+            
+        const convIds = conversations?.map(c => c.conversation_id) || [];
+
+        if (convIds.length > 0) {
+            // Delete messages
+            const { error: msgErr } = await supabase.from('Message').delete().in('conversation_id', convIds);
+            if (msgErr) throw msgErr;
+
+            // Delete conversations
+            const { error: convErr } = await supabase.from('Conversation').delete().in('conversation_id', convIds);
+            if (convErr) throw convErr;
+        }
+
+        // 3. Delete class memberships
+        const { error: memberErr } = await supabase.from('UserClass').delete().eq('class_id', class_id);
+        if (memberErr) throw memberErr;
+
+        // 4. Delete the class itself
+        const { error: classErr } = await supabase.from('Class').delete().eq('class_id', class_id);
+        if (classErr) throw classErr;
+
+        return res.status(200).json({ message: 'Class successfully deleted' });
+    } catch (err) {
+        console.error('Failed to delete class:', err);
+        return res.status(500).json({ error: 'Failed to delete class and associated data' });
+    }
+});
+
 export default router;

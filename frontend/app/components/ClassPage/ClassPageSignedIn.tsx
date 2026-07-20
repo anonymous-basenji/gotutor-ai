@@ -21,11 +21,8 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
     const [selectedMember, setSelectedMember] = useState<ClassMember | null>(null);
     const navigate = useNavigate();
 
-    if(!clsData) {
-        return;
-    }
-
     const fetchConversations = async (studentId?: string) => {
+        if (!clsData) return;
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
@@ -54,6 +51,7 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
     };
 
     useEffect(() => {
+        if (!clsData) return;
         setSupervisors(clsData.supervisors);
         setStudents(clsData.students);
 
@@ -90,7 +88,7 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ class_id: clsData.class_id, student_id: student.user_id })
+                    body: JSON.stringify({ class_id: clsData?.class_id, student_id: student.user_id })
                 });
 
                 if (response.ok) {
