@@ -4,6 +4,7 @@ import { supabase } from '../../lib/SupabaseClient';
 import { useNavigate } from 'react-router';
 import UserBadge from '../../components/UserBadge/UserBadge';
 import ConversationCard from './ConversationCard';
+import AddStudentForm from './AddStudentForm';
 import './ClassPage.css'
 
 interface Conversation {
@@ -13,7 +14,7 @@ interface Conversation {
     started_at: string;
 }
 
-function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId }: { clsData: ClassData | null, userName: string, isSupervisor: boolean, currUserId?: string }) {
+function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefresh }: { clsData: ClassData | null, userName: string, isSupervisor: boolean, currUserId?: string, onRefresh?: () => void }) {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [supervisors, setSupervisors] = useState<ClassMember[]>([]);
     const [students, setStudents] = useState<ClassMember[]>([]);
@@ -164,6 +165,9 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId }: { cl
                             })}
                             {students.length === 0 && <p className='no-members-msg'>No students in this class.</p>}
                         </div>
+                        {isSupervisor && (
+                            <AddStudentForm classId={clsData.class_id} onSuccess={onRefresh} />
+                        )}
                     </div>
                 </div>
             </div>

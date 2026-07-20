@@ -229,4 +229,61 @@ router.post("/add-user-to-class", async (req: Request, res: Response) => {
     return res.status(201).json(data);
 });
 
+router.post("/add-student-by-email", async(req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+    let user_id: string;
+
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) return res.status(401).json({ error: 'Invalid or expired token' });
+        user_id = user.id;
+    } catch (e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const classId = req.body.class_id;
+    const email = req.body.email;
+
+    const { data: supervisorCheck, error: supervisorError } = await supabase
+        .from('UserClass')
+        .select('role')
+        .eq('user_id', user_id)
+        .eq('class_id', classId)
+        .eq('role', 'supervisor')
+        .maybeSingle()
+
+    if(supervisorError || !supervisorCheck) {
+        return res.status(403).json({ error: 'Access denied: Only class supervisors can add students'});
+    }
+
+    const { data: student, error: studentError } = await supabase
+        .from('User')
+        .select('user_id')
+        .eq('email', email)
+        .maybeSingle();
+
+    if(studentError || !student) {
+        return res.status(404).json({ error: "No registered user found with that email" });
+    }
+
+    const { error: joinError } = await supabase
+        .from('UserClass')
+        .upsert(
+            { user_id: student.user_id, class_id: classId, role: 'student'},
+            { onConflict: 'user_id,class_id', ignoreDuplicates: true }
+        );
+
+    if(joinError) {
+        return res.status(500).json({ error: 'Failed to add student to class' });
+    }
+
+    return res.status(201).json({ message: 'Student successfully added' });
+})
+
 export default router;

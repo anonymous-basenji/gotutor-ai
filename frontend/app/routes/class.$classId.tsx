@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import type { MetaFunction } from 'react-router';
 import { UserContext } from '../lib/UserProvider';
@@ -31,34 +31,34 @@ export default function ClassPage() {
     const navigate = useNavigate();
     const user = userCtx?.user;
 
-    useEffect(() => {
-        const getClassData = async() => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            try {
-                const response = await fetch(
-                    `${import.meta.env.VITE_BACKEND_URL}/classes/get-class/${classId}`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
+    const getClassData = useCallback(async() => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        try {
+            const response = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/classes/get-class/${classId}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                );
-
-                if (response.ok) {
-                    const data: ClassData = await response.json();
-                    setClsData(data);
-                    document.title = `${data.name} - GoTutor.ai`;
                 }
-            } catch (error) {
-                console.error('Failed to fetch class data', error);
-            }
-        };
+            );
 
+            if (response.ok) {
+                const data: ClassData = await response.json();
+                setClsData(data);
+                document.title = `${data.name} - GoTutor.ai`;
+            }
+        } catch (error) {
+            console.error('Failed to fetch class data', error);
+        }
+    }, [classId]);
+
+    useEffect(() => {
         getClassData();
-    }, []);
+    }, [classId, getClassData]);
 
     if(!user) {
         return null;
@@ -71,7 +71,13 @@ export default function ClassPage() {
     return(
         <div>
             {userCtx?.user ? (
-                <ClassPageSignedIn clsData={clsData} userName={name} isSupervisor={isSupervisor} currUserId={user?.id}/>
+                <ClassPageSignedIn 
+                    clsData={clsData} 
+                    userName={name} 
+                    isSupervisor={isSupervisor} 
+                    currUserId={user?.id}
+                    onRefresh={getClassData}
+                />
             ) : 
                 <SignedOut nav={navigate}/>
             }
