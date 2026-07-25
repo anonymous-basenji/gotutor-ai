@@ -29,3 +29,6 @@ dist-ssr
 # React Router v7 generated files
 .react-router
 build
+
+# Antigravity generated directories
+.agents
