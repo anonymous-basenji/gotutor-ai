@@ -36,6 +36,18 @@ router.get('/', async(req: Request, res: Response) => {
         if(!check) {
             return res.status(403).json({ error: 'Access denied: You are not a supervisor in this class' });
         }
+
+        const { data: targetSupervisorCheck } = await supabase
+            .from('UserClass')
+            .select('role')
+            .eq('user_id', targetStudentId)
+            .eq('class_id', class_id)
+            .eq('role', 'supervisor')
+            .maybeSingle();
+
+        if (targetSupervisorCheck) {
+            return res.status(403).json({ error: 'Access denied: Supervisors cannot view conversations of other supervisors' });
+        }
     }
 
     const { data, error } = await supabase

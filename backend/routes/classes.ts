@@ -229,7 +229,17 @@ router.post("/add-user-to-class", async (req: Request, res: Response) => {
     return res.status(201).json(data);
 });
 
-router.post("/add-student-by-email", async(req: Request, res: Response) => {
+const calculateAge = (birthDate: Date) => {
+    const currentDate: Date = new Date();
+    let age = currentDate.getFullYear() - birthDate.getFullYear();
+    const monthDiff = currentDate.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
+router.post("/add-user-by-email", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer')) {
@@ -249,6 +259,11 @@ router.post("/add-student-by-email", async(req: Request, res: Response) => {
 
     const classId = req.body.class_id;
     const email = req.body.email;
+    const role = req.body.role || 'student';
+
+    if (role !== 'student' && role !== 'supervisor') {
+        return res.status(400).json({ error: 'Role must be either student or supervisor' });
+    }
 
     const { data: supervisorCheck, error: supervisorError } = await supabase
         .from('UserClass')
@@ -256,35 +271,41 @@ router.post("/add-student-by-email", async(req: Request, res: Response) => {
         .eq('user_id', user_id)
         .eq('class_id', classId)
         .eq('role', 'supervisor')
-        .maybeSingle()
+        .maybeSingle();
 
-    if(supervisorError || !supervisorCheck) {
-        return res.status(403).json({ error: 'Access denied: Only class supervisors can add students'});
+    if (supervisorError || !supervisorCheck) {
+        return res.status(403).json({ error: 'Access denied: Only class supervisors can add users' });
     }
 
-    const { data: student, error: studentError } = await supabase
+    const { data: targetUser, error: targetUserError } = await supabase
         .from('User')
-        .select('user_id')
+        .select('user_id, date_of_birth')
         .eq('email', email)
         .maybeSingle();
 
-    if(studentError || !student) {
+    if (targetUserError || !targetUser) {
         return res.status(404).json({ error: "No registered user found with that email" });
+    }
+
+    if (role === 'supervisor') {
+        if (!targetUser.date_of_birth || calculateAge(new Date(targetUser.date_of_birth)) < 18) {
+            return res.status(403).json({ error: 'User must be 18 or older to be added as a supervisor' });
+        }
     }
 
     const { error: joinError } = await supabase
         .from('UserClass')
         .upsert(
-            { user_id: student.user_id, class_id: classId, role: 'student'},
+            { user_id: targetUser.user_id, class_id: classId, role },
             { onConflict: 'user_id,class_id', ignoreDuplicates: true }
         );
 
-    if(joinError) {
-        return res.status(500).json({ error: 'Failed to add student to class' });
+    if (joinError) {
+        return res.status(500).json({ error: `Failed to add ${role} to class` });
     }
 
-    return res.status(201).json({ message: 'Student successfully added' });
-})
+    return res.status(201).json({ message: `${role === 'supervisor' ? 'Supervisor' : 'Student'} successfully added` });
+});
 
 router.delete("/remove-student", async(req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
