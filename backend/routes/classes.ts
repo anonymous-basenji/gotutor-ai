@@ -307,7 +307,7 @@ router.post("/add-user-by-email", async (req: Request, res: Response) => {
     return res.status(201).json({ message: `${role === 'supervisor' ? 'Supervisor' : 'Student'} successfully added` });
 });
 
-router.delete("/remove-student", async(req: Request, res: Response) => {
+router.delete("/remove-user", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer')) {
         return res.status(401).json({ error: 'No token provided' });
@@ -322,33 +322,59 @@ router.delete("/remove-student", async(req: Request, res: Response) => {
         return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { class_id, student_id } = req.body;
+    const { class_id } = req.body;
+    const target_user_id = req.body.user_id || req.body.target_user_id || req.body.student_id;
+    const role = req.body.role || 'student';
 
-    const { data: supervisorCheck, error: supervisorError } = await supabase
-        .from('UserClass')
-        .select('role')
-        .eq('user_id', requester_id)
-        .eq('class_id', class_id)
-        .eq('role', 'supervisor')
-        .maybeSingle();
+    if (!class_id || !target_user_id) {
+        return res.status(400).json({ error: 'class_id and user_id are required' });
+    }
 
-    if (supervisorError || !supervisorCheck) {
-        return res.status(403).json({ error: 'Access denied: Only supervisors can remove students' });
+    if (role === 'supervisor') {
+        if (requester_id !== target_user_id) {
+            return res.status(403).json({ error: 'Access denied: Only a supervisor can remove themselves from a class' });
+        }
+
+        const { data: supervisors, error: supError } = await supabase
+            .from('UserClass')
+            .select('user_id')
+            .eq('class_id', class_id)
+            .eq('role', 'supervisor');
+
+        if (supError) {
+            return res.status(500).json({ error: 'Failed to check class supervisors' });
+        }
+
+        if (supervisors.length <= 1) {
+            return res.status(403).json({ error: 'Cannot leave class: A class must have at least one supervisor' });
+        }
+    } else {
+        const { data: supervisorCheck, error: supervisorError } = await supabase
+            .from('UserClass')
+            .select('role')
+            .eq('user_id', requester_id)
+            .eq('class_id', class_id)
+            .eq('role', 'supervisor')
+            .maybeSingle();
+
+        if (supervisorError || !supervisorCheck) {
+            return res.status(403).json({ error: 'Access denied: Only supervisors can remove students' });
+        }
     }
 
     const { error: deleteError } = await supabase
         .from('UserClass')
         .delete()
-        .eq('user_id', student_id)
+        .eq('user_id', target_user_id)
         .eq('class_id', class_id)
-        .eq('role', 'student');
+        .eq('role', role);
 
     if (deleteError) {
         console.error(deleteError);
-        return res.status(500).json({ error: 'Failed to remove student' });
+        return res.status(500).json({ error: `Failed to remove ${role}` });
     }
 
-    return res.status(200).json({ message: 'Student successfully removed' });
+    return res.status(200).json({ message: `${role === 'supervisor' ? 'Supervisor' : 'Student'} successfully removed` });
 });
 
 router.delete("/delete-class", async (req: Request, res: Response) => {

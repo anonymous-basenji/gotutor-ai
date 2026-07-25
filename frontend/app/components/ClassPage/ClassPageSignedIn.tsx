@@ -82,13 +82,13 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
             try {
-                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/remove-student`, {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/remove-user`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ class_id: clsData?.class_id, student_id: student.user_id })
+                    body: JSON.stringify({ class_id: clsData?.class_id, user_id: student.user_id, role: 'student' })
                 });
 
                 if (response.ok) {
@@ -102,6 +102,33 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                 }
             } catch (err) {
                 console.error('Error removing student:', err);
+            }
+        }
+    };
+
+    const handleLeaveClass = async () => {
+        if (!currUserId || !clsData) return;
+        if (window.confirm("Are you sure you want to leave this class?")) {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            try {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/remove-user`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ class_id: clsData.class_id, user_id: currUserId, role: 'supervisor' })
+                });
+
+                if (response.ok) {
+                    navigate('/user-dashboard');
+                } else {
+                    const errData = await response.json().catch(() => null);
+                    alert(errData?.error || 'Failed to leave class');
+                }
+            } catch (err) {
+                console.error('Error leaving class:', err);
             }
         }
     };
@@ -170,7 +197,12 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                             {supervisors.length === 0 && <p className='no-members-msg'>No supervisors assigned.</p>}
                         </div>
                         {isSupervisor && (
-                            <AddStudentForm classId={clsData.class_id} role="supervisor" onSuccess={onRefresh} />
+                            <>
+                                <AddStudentForm classId={clsData.class_id} role="supervisor" onSuccess={onRefresh} />
+                                <button className="leave-class-btn" onClick={handleLeaveClass}>
+                                    Leave this class
+                                </button>
+                            </>
                         )}
                     </div>
 
