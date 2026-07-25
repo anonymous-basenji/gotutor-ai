@@ -147,18 +147,20 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                         <div className='members-list'>
                             {supervisors.map(member => {
                                 const isSelected = selectedMember?.user_id === member.user_id;
+                                const isSelf = member.user_id === currUserId;
+                                const canClick = isSupervisor && isSelf;
                                 return (
                                     <div 
                                         key={member.user_id} 
-                                        className={`member-card supervisor-card ${isSupervisor ? 'clickable' : ''} ${isSelected ? 'active-card' : ''}`}
-                                        onClick={() => handleMemberClick(member)}
+                                        className={`member-card supervisor-card ${canClick ? 'clickable' : ''} ${isSelected ? 'active-card' : ''}`}
+                                        onClick={() => canClick && handleMemberClick(member)}
                                     >
                                         <div className='member-avatar'>
                                             {member.name.charAt(0).toUpperCase()}
                                         </div>
                                         <div className='member-details'>
                                             <p className='member-name'>
-                                                {member.name}{member.user_id === currUserId && " (You)"}
+                                                {member.name}{isSelf && " (You)"}
                                             </p>
                                             <p className='member-email'>{member.email}</p>
                                         </div>
@@ -167,6 +169,9 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                             })}
                             {supervisors.length === 0 && <p className='no-members-msg'>No supervisors assigned.</p>}
                         </div>
+                        {isSupervisor && (
+                            <AddStudentForm classId={clsData.class_id} role="supervisor" onSuccess={onRefresh} />
+                        )}
                     </div>
 
                     <div className='members-section'>
@@ -204,7 +209,7 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                             {students.length === 0 && <p className='no-members-msg'>No students in this class.</p>}
                         </div>
                         {isSupervisor && (
-                            <AddStudentForm classId={clsData.class_id} onSuccess={onRefresh} />
+                            <AddStudentForm classId={clsData.class_id} role="student" onSuccess={onRefresh} />
                         )}
                     </div>
                 </div>

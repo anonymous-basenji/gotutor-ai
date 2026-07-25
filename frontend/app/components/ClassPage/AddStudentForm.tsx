@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/SupabaseClient';
 
-function AddStudentForm({ classId, onSuccess }: { classId: string; onSuccess?: () => void }) {
+function AddStudentForm({ classId, role = 'student', onSuccess }: { classId: string; role?: 'student' | 'supervisor'; onSuccess?: () => void }) {
     const [isEditing, setIsEditing] = useState(false);
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
@@ -16,29 +16,34 @@ function AddStudentForm({ classId, onSuccess }: { classId: string; onSuccess?: (
         const token = session?.access_token;
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/add-student-by-email`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/add-user-by-email`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ class_id: classId, email: email.trim() })
+                body: JSON.stringify({ class_id: classId, email: email.trim(), role })
             });
 
             if (!response.ok) {
+                const errData = await response.json().catch(() => null);
                 if (response.status === 404) {
                     alert("No registered user found with that email.");
-                    setEmail('');
-                    setIsEditing(false);
+                } else if (response.status === 403) {
+                    alert(errData?.error || "Access denied: User cannot be added with this role.");
+                } else {
+                    alert(errData?.error || `Failed to add ${role}`);
                 }
-                throw new Error('Failed to add student');
+                setEmail('');
+                setIsEditing(false);
+                throw new Error(errData?.error || `Failed to add ${role}`);
             }
             setEmail('');
             setIsEditing(false);
 
             if (onSuccess) onSuccess();
         } catch(err) {
-            console.error('Failed to add student:', err);
+            console.error(`Failed to add ${role}:`, err);
         } finally {
             setLoading(false);
         }
@@ -48,7 +53,7 @@ function AddStudentForm({ classId, onSuccess }: { classId: string; onSuccess?: (
         return(
             <div className="add-student-form clickable" onClick={() => setIsEditing(true)}>
                 <h1>+</h1>
-                <h2>Add student</h2>
+                <h2>Add {role}</h2>
             </div>
         );
     }
@@ -59,7 +64,7 @@ function AddStudentForm({ classId, onSuccess }: { classId: string; onSuccess?: (
                 <input
                     type='email'
                     className='student-email-input'
-                    placeholder='Enter student email...'
+                    placeholder={`Enter ${role} email...`}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                     autoFocus
