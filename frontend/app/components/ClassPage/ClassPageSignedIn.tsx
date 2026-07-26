@@ -19,6 +19,8 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
     const [supervisors, setSupervisors] = useState<ClassMember[]>([]);
     const [students, setStudents] = useState<ClassMember[]>([]);
     const [selectedMember, setSelectedMember] = useState<ClassMember | null>(null);
+    const [isEditingClassName, setIsEditingClassName] = useState<boolean>(false);
+    const [newClassName, setNewClassName] = useState<string>('');
     const navigate = useNavigate();
 
     const fetchConversations = async (studentId?: string) => {
@@ -133,6 +135,35 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         }
     };
 
+    const handleRenameClass = async(newClass: string) => {
+        if(!currUserId || !clsData || !newClass.trim()) return;
+        if(window.confirm(`Are you sure you want to rename this class to "${newClass.trim()}"?`)) {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            try {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/rename-class`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ class_id: clsData.class_id, new_name: newClass.trim() })
+                });
+
+                if(response.ok) {
+                    window.alert(`Class successfully renamed to "${newClass.trim()}".`);
+                    setIsEditingClassName(false);
+                    if (onRefresh) onRefresh();
+                } else {
+                    const errData = await response.json().catch(() => null);
+                    window.alert(errData?.error || 'An error occurred trying to rename your class. Are you a supervisor?');
+                }
+            } catch(err) {
+                console.error('Error renaming class:', err);
+            }
+        }
+    };
+
     if (!clsData) {
         return null;
     }
@@ -141,7 +172,53 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         <div className='class-page'>
             <UserBadge />
             <div className='class-page-header'>
-                <h1>{clsData.name}</h1>
+                {!isEditingClassName ? (
+                    <div className='class-title-container'>
+                        <h1>{clsData.name}</h1>
+                        {isSupervisor && (
+                            <button 
+                                className='edit-class-title-btn' 
+                                type='button' 
+                                aria-label='Edit class title'
+                                onClick={() => {
+                                    setNewClassName(clsData.name);
+                                    setIsEditingClassName(true);
+                                }}
+                            >
+                                <img src='/edit-pencil-01-svgrepo-com.svg' alt='Edit class title' />
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <form 
+                        className='class-title-container-editing'
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleRenameClass(newClassName);
+                        }}
+                    >
+                        <input 
+                            type='text' 
+                            className='new-class-name-input'
+                            value={newClassName}
+                            onChange={(e) => setNewClassName(e.target.value)}
+                            placeholder='Enter new class name...'
+                            autoFocus
+                            required
+                        />
+                        <button type='submit' className='rename-submit-btn' disabled={!newClassName.trim()}>
+                            Enter
+                        </button>
+                        <button 
+                            type='button' 
+                            className='edit-class-title-btn' 
+                            aria-label='Close edit mode'
+                            onClick={() => setIsEditingClassName(false)}
+                        >
+                            <img src='/close-sm-svgrepo-com.svg' alt='Close edit mode' />
+                        </button>
+                    </form>
+                )}
                 <h3>Welcome to your course, {userName}{isSupervisor && " (Supervisor)"}</h3>
                 <button className="back-btn" onClick={() => navigate('/user-dashboard')}>← Back to Dashboard</button>
             </div>

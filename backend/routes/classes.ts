@@ -184,7 +184,7 @@ router.get("/get-class/:id", async(req: Request, res: Response) => {
     });
 });
 
-router.post("/add-user-to-class", async (req: Request, res: Response) => {
+router.post("/add-user-to-class", async(req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer')) {
@@ -239,7 +239,7 @@ const calculateAge = (birthDate: Date) => {
     return age;
 };
 
-router.post("/add-user-by-email", async (req: Request, res: Response) => {
+router.post("/add-user-by-email", async(req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer')) {
@@ -307,7 +307,7 @@ router.post("/add-user-by-email", async (req: Request, res: Response) => {
     return res.status(201).json({ message: `${role === 'supervisor' ? 'Supervisor' : 'Student'} successfully added` });
 });
 
-router.delete("/remove-user", async (req: Request, res: Response) => {
+router.delete("/remove-user", async(req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer')) {
         return res.status(401).json({ error: 'No token provided' });
@@ -377,7 +377,7 @@ router.delete("/remove-user", async (req: Request, res: Response) => {
     return res.status(200).json({ message: `${role === 'supervisor' ? 'Supervisor' : 'Student'} successfully removed` });
 });
 
-router.delete("/delete-class", async (req: Request, res: Response) => {
+router.delete("/delete-class", async(req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer')) {
         return res.status(401).json({ error: 'No token provided' });
@@ -442,6 +442,54 @@ router.delete("/delete-class", async (req: Request, res: Response) => {
         console.error('Failed to delete class:', err);
         return res.status(500).json({ error: 'Failed to delete class and associated data' });
     }
+});
+
+router.post("/rename-class", async(req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if(!authHeader || !authHeader.startsWith('Bearer')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.split('Bearer ')[1];
+    let user_id: string;
+    try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if(authError || !user) {
+            return res.status(401).json({ error: 'Invalid token'});
+        }
+        user_id = user.id;
+    } catch(e) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { class_id, new_name } = req.body;
+    if(!class_id || !new_name) {
+        return res.status(400).json({ error: 'class_id or new_name missing' });
+    }
+
+    const { data: supervisorCheck, error: supervisorError } = await supabase
+        .from('UserClass')
+        .select('role')
+        .eq('user_id', user_id)
+        .eq('class_id', class_id)
+        .eq('role', 'supervisor')
+        .maybeSingle();
+
+    if(supervisorError || !supervisorCheck) {
+        return res.status(403).json({ error: 'Access denied: Only supervisors can access this resource' });
+    }
+
+    const { error: nameChangeError } = await supabase
+        .from('Class')
+        .update({ name: new_name })
+        .eq('class_id', class_id)
+        .select();
+
+    if(nameChangeError) {
+        console.error(nameChangeError);
+        return res.status(500).json({ error: `Failed to rename class ${class_id}` });
+    }
+
+    return res.status(200).json({ message: 'Class successfully renamed' });
 });
 
 export default router;
