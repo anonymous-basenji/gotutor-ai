@@ -334,6 +334,29 @@ Deletes a class and all associated data (conversations, messages, class membersh
 
 ---
 
+#### `POST /classes/rename-class`
+
+Renames an existing class. **Requires class supervisor role**.
+
+**Request Body:**
+
+```json
+{
+  "class_id": 1,
+  "new_name": "Calculus II"
+}
+```
+
+| Status | Description |
+| ------ | ----------- |
+| `200`  | Class successfully renamed |
+| `400`  | `class_id` or `new_name` missing |
+| `401`  | Missing or invalid token |
+| `403`  | Access denied: Only supervisors can access this resource |
+| `500`  | Server error |
+
+---
+
 ### Conversations — `/conversations`
 
 #### `GET /conversations?class_id=<id>&student_id=<student_id>`
