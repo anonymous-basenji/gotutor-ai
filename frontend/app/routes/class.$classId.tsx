@@ -57,30 +57,31 @@ export default function ClassPage() {
     }, [classId]);
 
     useEffect(() => {
-        getClassData();
-    }, [classId, getClassData]);
+        if (user) {
+            getClassData();
+        }
+    }, [user, classId, getClassData]);
 
-    if(!user) {
-        return null;
+    if (userCtx?.loading) {
+        return <div className="loading-screen">Loading class...</div>;
+    }
+
+    if (!user) {
+        return <SignedOut nav={navigate} />;
     }
 
     const name = user.user_metadata?.full_name || user.email || "User";
+    const isSupervisor = clsData?.supervisors.some(s => s.user_id === user.id) || false;
 
-    const isSupervisor = clsData?.supervisors.some(s => s.user_id === user?.id) || false;
-
-    return(
+    return (
         <div>
-            {userCtx?.user ? (
-                <ClassPageSignedIn 
-                    clsData={clsData} 
-                    userName={name} 
-                    isSupervisor={isSupervisor} 
-                    currUserId={user?.id}
-                    onRefresh={getClassData}
-                />
-            ) : 
-                <SignedOut nav={navigate}/>
-            }
+            <ClassPageSignedIn 
+                clsData={clsData} 
+                userName={name} 
+                isSupervisor={isSupervisor} 
+                currUserId={user.id}
+                onRefresh={getClassData}
+            />
         </div>
-    ); 
+    );
 }
