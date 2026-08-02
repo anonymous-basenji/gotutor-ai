@@ -1,16 +1,11 @@
-/**
- * Conversation Repository — data access for the "Conversation" table.
- */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/AppError';
 
-/** Shorthand type for class IDs */
 type ClassId = string | number;
 
 export class ConversationRepository {
     constructor(private supabase: SupabaseClient) {}
 
-    /** Find all conversations for a student in a specific class. */
     async findByStudentAndClass(studentId: string, classId: ClassId) {
         const { data, error } = await this.supabase
             .from('Conversation')
@@ -26,7 +21,6 @@ export class ConversationRepository {
         return data;
     }
 
-    /** Find all conversations in a class. Used during class deletion. */
     async findByClass(classId: ClassId) {
         const { data, error } = await this.supabase
             .from('Conversation')
@@ -40,7 +34,6 @@ export class ConversationRepository {
         return data;
     }
 
-    /** Delete conversations by their IDs. Used during class deletion. */
     async deleteByIds(conversationIds: number[]) {
         const { error } = await this.supabase
             .from('Conversation')

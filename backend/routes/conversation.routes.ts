@@ -1,6 +1,3 @@
-/**
- * Conversation Routes — wires URLs to controller methods.
- */
 import { Router, RequestHandler } from 'express';
 import { ConversationController } from '../controllers/conversation.controller';
 

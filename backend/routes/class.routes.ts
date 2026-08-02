@@ -1,9 +1,3 @@
-/**
- * Class Routes — wires URLs to controller methods.
- *
- * Every URL path here matches the original routes/classes.ts exactly,
- * so the frontend doesn't need any changes.
- */
 import { Router, RequestHandler } from 'express';
 import { ClassController } from '../controllers/class.controller';
 

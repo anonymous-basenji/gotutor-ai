@@ -1,19 +1,11 @@
-/**
- * Class Repository — data access for the "Class" table.
- *
- * Handles CRUD operations on classes themselves (not membership — that's
- * in MembershipRepository).
- */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/AppError';
 
-/** Shorthand type for class IDs */
 type ClassId = string | number;
 
 export class ClassRepository {
     constructor(private supabase: SupabaseClient) {}
 
-    /** Create a new class. Returns the created row. */
     async create(name: string) {
         const { data, error } = await this.supabase
             .from('Class')
@@ -28,7 +20,6 @@ export class ClassRepository {
         return data;
     }
 
-    /** Find a class by its ID. Returns null if not found. */
     async findById(classId: ClassId) {
         const { data, error } = await this.supabase
             .from('Class')
@@ -40,10 +31,9 @@ export class ClassRepository {
             throw new AppError('Failed to find class', 500);
         }
 
-        return data; // null if not found
+        return data;
     }
 
-    /** Rename a class. */
     async rename(classId: ClassId, newName: string) {
         const { error } = await this.supabase
             .from('Class')
@@ -57,7 +47,6 @@ export class ClassRepository {
         }
     }
 
-    /** Delete a class by its ID. */
     async deleteById(classId: ClassId) {
         const { error } = await this.supabase
             .from('Class')
