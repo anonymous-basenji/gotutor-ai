@@ -1,8 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/AppError';
 
-type ClassId = string | number;
-
 export class ClassRepository {
     constructor(private supabase: SupabaseClient) {}
 
@@ -20,7 +18,7 @@ export class ClassRepository {
         return data;
     }
 
-    async findById(classId: ClassId) {
+    async findById(classId: string) {
         const { data, error } = await this.supabase
             .from('Class')
             .select('name')
@@ -34,7 +32,7 @@ export class ClassRepository {
         return data;
     }
 
-    async rename(classId: ClassId, newName: string) {
+    async rename(classId: string, newName: string) {
         const { error } = await this.supabase
             .from('Class')
             .update({ name: newName })
@@ -47,7 +45,7 @@ export class ClassRepository {
         }
     }
 
-    async deleteById(classId: ClassId) {
+    async deleteById(classId: string) {
         const { error } = await this.supabase
             .from('Class')
             .delete()

@@ -6,8 +6,6 @@ import { MessageRepository } from '../repositories/message.repository';
 import { ForbiddenError, NotFoundError, AppError } from '../errors/AppError';
 import { calculateAge } from '../utils/age';
 
-type ClassId = string | number;
-
 export class ClassService {
     constructor(
         private classRepo: ClassRepository,
@@ -45,7 +43,7 @@ export class ClassService {
         }));
     }
 
-    async getClassDetail(userId: string, classId: ClassId) {
+    async getClassDetail(userId: string, classId: string) {
         const role = await this.membershipRepo.getMemberRole(userId, classId);
         if (!role) {
             throw new ForbiddenError('Access denied: You are not a member of this class');
@@ -82,11 +80,11 @@ export class ClassService {
         };
     }
 
-    async addSelfToClass(userId: string, classId: ClassId, role: string) {
+    async addSelfToClass(userId: string, classId: string, role: string) {
         return await this.membershipRepo.addMember(userId, classId, role);
     }
 
-    async addUserByEmail(requesterId: string, classId: ClassId, email: string, role: string) {
+    async addUserByEmail(requesterId: string, classId: string, email: string, role: string) {
         const isSupervisor = await this.membershipRepo.isSupervisor(requesterId, classId);
         if (!isSupervisor) {
             throw new ForbiddenError('Access denied: Only class supervisors can add users');
@@ -110,7 +108,7 @@ export class ClassService {
         };
     }
 
-    async removeUser(requesterId: string, targetUserId: string, classId: ClassId, role: string) {
+    async removeUser(requesterId: string, targetUserId: string, classId: string, role: string) {
         if (role === 'supervisor') {
             if (requesterId !== targetUserId) {
                 throw new ForbiddenError('Access denied: Only a supervisor can remove themselves from a class');
@@ -134,7 +132,7 @@ export class ClassService {
         };
     }
 
-    async deleteClass(userId: string, classId: ClassId) {
+    async deleteClass(userId: string, classId: string) {
         const isSupervisor = await this.membershipRepo.isSupervisor(userId, classId);
         if (!isSupervisor) {
             throw new ForbiddenError('Access denied: Only supervisors can delete a class');
@@ -159,7 +157,7 @@ export class ClassService {
         }
     }
 
-    async renameClass(userId: string, classId: ClassId, newName: string) {
+    async renameClass(userId: string, classId: string, newName: string) {
         const isSupervisor = await this.membershipRepo.isSupervisor(userId, classId);
         if (!isSupervisor) {
             throw new ForbiddenError('Access denied: Only supervisors can access this resource');

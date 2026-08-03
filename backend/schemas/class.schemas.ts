@@ -5,20 +5,20 @@ export const createClassSchema = z.object({
 });
 
 export const addUserToClassSchema = z.object({
-    class_id: z.union([z.string(), z.number()], { error: 'class_id is required' }),
+    class_id: z.coerce.string({ error: 'class_id is required' }),
     role: z.enum(['supervisor', 'student'], {
         error: 'role must be one of: supervisor, student',
     }),
 });
 
 export const addUserByEmailSchema = z.object({
-    class_id: z.union([z.string(), z.number()], { error: 'class_id is required' }),
+    class_id: z.coerce.string({ error: 'class_id is required' }),
     email: z.string().min(1, 'Email is required'),
     role: z.enum(['supervisor', 'student']).default('student'),
 });
 
 export const removeUserSchema = z.object({
-    class_id: z.union([z.string(), z.number()], { error: 'class_id is required' }),
+    class_id: z.coerce.string({ error: 'class_id is required' }),
     user_id: z.string().optional(),
     target_user_id: z.string().optional(),
     student_id: z.string().optional(),
@@ -26,11 +26,11 @@ export const removeUserSchema = z.object({
 });
 
 export const deleteClassSchema = z.object({
-    class_id: z.union([z.string(), z.number()], { error: 'class_id is required' }),
+    class_id: z.coerce.string({ error: 'class_id is required' }),
 });
 
 export const renameClassSchema = z.object({
-    class_id: z.union([z.string(), z.number()], { error: 'class_id is required' }),
+    class_id: z.coerce.string({ error: 'class_id is required' }),
     new_name: z.string().min(1, 'new_name is required'),
 });
 

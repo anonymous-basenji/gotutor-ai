@@ -1,12 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/AppError';
 
-type ClassId = string | number;
-
 export class ConversationRepository {
     constructor(private supabase: SupabaseClient) {}
 
-    async findByStudentAndClass(studentId: string, classId: ClassId) {
+    async findByStudentAndClass(studentId: string, classId: string) {
         const { data, error } = await this.supabase
             .from('Conversation')
             .select('*')
@@ -21,7 +19,7 @@ export class ConversationRepository {
         return data;
     }
 
-    async findByClass(classId: ClassId) {
+    async findByClass(classId: string) {
         const { data, error } = await this.supabase
             .from('Conversation')
             .select('conversation_id')

@@ -8,7 +8,7 @@ export class ConversationService {
         private membershipRepo: MembershipRepository,
     ) {}
 
-    async getConversations(requesterId: string, classId: number | string, targetStudentId?: string) {
+    async getConversations(requesterId: string, classId: string, targetStudentId?: string) {
         const studentId = targetStudentId || requesterId;
 
         if (studentId !== requesterId) {

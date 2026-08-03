@@ -1,12 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/AppError';
 
-type ClassId = string | number;
-
 export class MembershipRepository {
     constructor(private supabase: SupabaseClient) {}
 
-    async isSupervisor(userId: string, classId: ClassId): Promise<boolean> {
+    async isSupervisor(userId: string, classId: string): Promise<boolean> {
         const { data, error } = await this.supabase
             .from('UserClass')
             .select('role')
@@ -22,7 +20,7 @@ export class MembershipRepository {
         return data !== null;
     }
 
-    async getMemberRole(userId: string, classId: ClassId): Promise<string | null> {
+    async getMemberRole(userId: string, classId: string): Promise<string | null> {
         const { data, error } = await this.supabase
             .from('UserClass')
             .select('role')
@@ -52,7 +50,7 @@ export class MembershipRepository {
         return data;
     }
 
-    async getSupervisorsForClasses(classIds: ClassId[]) {
+    async getSupervisorsForClasses(classIds: string[]) {
         const { data, error } = await this.supabase
             .from('UserClass')
             .select('class_id, User(name)')
@@ -67,7 +65,7 @@ export class MembershipRepository {
         return data;
     }
 
-    async getClassMembers(classId: ClassId) {
+    async getClassMembers(classId: string) {
         const { data, error } = await this.supabase
             .from('UserClass')
             .select('role, user_id, User(name, email)')
@@ -81,7 +79,7 @@ export class MembershipRepository {
         return data;
     }
 
-    async addMember(userId: string, classId: ClassId, role: string) {
+    async addMember(userId: string, classId: string, role: string) {
         const { data, error } = await this.supabase
             .from('UserClass')
             .upsert(
@@ -98,7 +96,7 @@ export class MembershipRepository {
         return data;
     }
 
-    async removeMember(userId: string, classId: ClassId, role: string) {
+    async removeMember(userId: string, classId: string, role: string) {
         const { error } = await this.supabase
             .from('UserClass')
             .delete()
@@ -112,7 +110,7 @@ export class MembershipRepository {
         }
     }
 
-    async getSupervisorCount(classId: ClassId): Promise<number> {
+    async getSupervisorCount(classId: string): Promise<number> {
         const { data, error } = await this.supabase
             .from('UserClass')
             .select('user_id')
@@ -126,7 +124,7 @@ export class MembershipRepository {
         return data.length;
     }
 
-    async removeAllByClass(classId: ClassId) {
+    async removeAllByClass(classId: string) {
         const { error } = await this.supabase
             .from('UserClass')
             .delete()

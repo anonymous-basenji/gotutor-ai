@@ -6,20 +6,20 @@ export interface User {
 }
 
 export interface Class {
-    class_id: string | number;
+    class_id: string;
     name: string;
 }
 
 export interface UserClass {
     user_id: string;
-    class_id: string | number;
+    class_id: string;
     role: 'supervisor' | 'student';
 }
 
 export interface Conversation {
     conversation_id: number;
     student_id: string;
-    class_id: string | number;
+    class_id: string;
     started_at: string;
 }
 
