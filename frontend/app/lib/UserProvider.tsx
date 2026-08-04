@@ -1,6 +1,9 @@
-import { useState, useEffect, createContext } from 'react';
+import { useState, useEffect, createContext, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { supabase } from './SupabaseClient';
 import { type User } from '@supabase/supabase-js';
+import { useIdleTimer } from './useIdleTimer';
+import { InactivityModal } from '../components/InactivityModal/InactivityModal';
 
 interface UserContextType {
     user: User | null;
@@ -12,10 +15,21 @@ interface UserContextType {
 export const UserContext = createContext<UserContextType | null>(null);
 
 function UserProvider({ children }: { children: React.ReactNode }) {
+    const navigate = useNavigate();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [authEvent, setAuthEvent] = useState<string>("");
     const [isAdult, setIsAdult] = useState<boolean | null>(null);
+
+    const handleSignOut = useCallback(async () => {
+        await supabase.auth.signOut();
+        navigate('/sign-in');
+    }, [navigate]);
+
+    const { isWarningVisible, secondsRemaining, resetTimer } = useIdleTimer({
+        onIdle: handleSignOut,
+        enabled: !!user,
+    });
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -45,6 +59,9 @@ function UserProvider({ children }: { children: React.ReactNode }) {
 
             if (!response.ok) {
                 console.error(`HTTP error at /auth/me: ${response.status}`);
+                if (response.status === 401) {
+                    await supabase.auth.signOut();
+                }
                 return;
             }
 
@@ -58,8 +75,15 @@ function UserProvider({ children }: { children: React.ReactNode }) {
     return(
         <UserContext.Provider value={{user, loading, authEvent, isAdult}}>
             {children}
+            <InactivityModal
+                isOpen={isWarningVisible && !!user}
+                secondsRemaining={secondsRemaining}
+                onStaySignedIn={resetTimer}
+                onSignOut={handleSignOut}
+            />
         </UserContext.Provider>
     );
 }
 
 export default UserProvider;
+

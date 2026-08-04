@@ -13,7 +13,6 @@ export const meta: MetaFunction = () => [
 
 export default function SignIn() {
     const [showAgeForm, setShowAgeForm] = useState(false);
-    const [signingIn, setSigningIn] = useState(false);
     const userCtx = useContext(UserContext);
     const navigate = useNavigate();
 
@@ -28,9 +27,6 @@ export default function SignIn() {
 
             if(error) {
                 throw error;
-            } else {
-                setSigningIn(true);
-                sessionStorage.setItem('oauth_in_progress', 'true');
             }
         } catch (error) {
             console.error("Error signing in with Google", error);
@@ -62,11 +58,10 @@ export default function SignIn() {
             };
         };
 
-        if(userCtx && !userCtx.loading && userCtx.authEvent === 'SIGNED_IN' && sessionStorage.getItem('oauth_in_progress')) {
-            sessionStorage.removeItem('oauth_in_progress');
+        if (userCtx && !userCtx.loading && userCtx.user) {
             checkUserProfile();
-        };
-    }, [userCtx?.user, userCtx?.loading, userCtx?.authEvent, navigate]);
+        }
+    }, [userCtx?.user, userCtx?.loading, navigate]);
 
     return(
         <div className='sign-in-screen'>

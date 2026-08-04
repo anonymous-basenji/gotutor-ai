@@ -8,9 +8,10 @@ import CreateClassCard from './CreateClassCard';
 import './UserDashboard.css';
 
 interface ClassVisual {
-    name: string,
-    class_id: string,
-    supervisor: string
+    name: string;
+    class_id: string;
+    supervisor: string;
+    role: string;
 }
 
 function UserDashboardSignedIn({ user }: { user: User }) {
@@ -88,7 +89,8 @@ function UserDashboardSignedIn({ user }: { user: User }) {
             const mapped: ClassVisual[] = data.map((row: any) => ({
                 class_id: row.class_id,
                 name: row.name,
-                supervisor: row.supervisor
+                supervisor: row.supervisor,
+                role: row.role
             }));
             setClasses(mapped);
         } catch(e) {
@@ -108,7 +110,14 @@ function UserDashboardSignedIn({ user }: { user: User }) {
             <h2>Your classes:</h2>
             <div className='classes-display-container'>
                 {classes.map(cls => (
-                    <ClassCard key={cls.class_id} classId={cls.class_id} classTitle={cls.name} supervisorName={cls.supervisor}/>
+                    <ClassCard 
+                        key={cls.class_id} 
+                        classId={cls.class_id} 
+                        classTitle={cls.name} 
+                        supervisorName={cls.supervisor}
+                        isSupervisor={cls.role === 'supervisor'}
+                        onDeleteRefresh={fetchClasses}
+                    />
                 ))}
                 {userCtx?.isAdult && (
                     <CreateClassCard onCreate={handleCreateClass} />

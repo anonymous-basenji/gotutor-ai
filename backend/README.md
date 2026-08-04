@@ -263,17 +263,112 @@ Adds the authenticated user to a class with a given role. Uses upsert with `igno
 
 ---
 
+#### `POST /classes/add-user-by-email`
+
+Adds a user to a class by their email address with an optional `role` (`"student"` or `"supervisor"`, defaulting to `"student"`). Requires the requester to be a supervisor in the class. If adding a supervisor, enforces that the target user is 18 years or older.
+
+**Request Body:**
+
+```json
+{
+  "class_id": 1,
+  "email": "user@example.com",
+  "role": "supervisor"
+}
+```
+
+| Status | Description |
+| ------ | ----------- |
+| `201`  | User added successfully |
+| `400`  | Role must be student or supervisor |
+| `401`  | Missing or invalid token |
+| `403`  | Requester is not a supervisor OR target user is under 18 (when adding a supervisor) |
+| `404`  | No registered user found with that email |
+| `500`  | Server error |
+
+---
+
+#### `DELETE /classes/remove-user`
+
+Removes a user from a class. If removing a student, requires the requester to be a supervisor. If removing a supervisor, only that exact supervisor can remove themselves, and there must be at least one other supervisor remaining in the class.
+
+**Request Body:**
+
+```json
+{
+  "class_id": 1,
+  "user_id": "abc-123",
+  "role": "supervisor"
+}
+```
+
+| Status | Description |
+| ------ | ----------- |
+| `200`  | User successfully removed |
+| `400`  | `class_id` and `user_id` are required |
+| `401`  | Missing or invalid token |
+| `403`  | Requester is not a supervisor (for student removal), requester is not self (for supervisor removal), or attempting to remove the last supervisor |
+| `500`  | Server error |
+
+---
+
+#### `DELETE /classes/delete-class`
+
+Deletes a class and all associated data (conversations, messages, class memberships). **Requires class supervisor role**.
+
+**Request Body:**
+
+```json
+{
+  "class_id": 1
+}
+```
+
+| Status | Description |
+| ------ | ----------- |
+| `200`  | Class and associated data successfully deleted |
+| `400`  | `class_id` is required |
+| `401`  | Missing or invalid token |
+| `403`  | Access denied: Only supervisors can delete a class |
+| `500`  | Server error |
+
+---
+
+#### `POST /classes/rename-class`
+
+Renames an existing class. **Requires class supervisor role**.
+
+**Request Body:**
+
+```json
+{
+  "class_id": 1,
+  "new_name": "Calculus II"
+}
+```
+
+| Status | Description |
+| ------ | ----------- |
+| `200`  | Class successfully renamed |
+| `400`  | `class_id` or `new_name` missing |
+| `401`  | Missing or invalid token |
+| `403`  | Access denied: Only supervisors can access this resource |
+| `500`  | Server error |
+
+---
+
 ### Conversations — `/conversations`
 
-#### `GET /conversations?class_id=<id>`
+#### `GET /conversations?class_id=<id>&student_id=<student_id>`
 
-Returns all conversations for the authenticated user within a specific class.
+Returns conversations within a specific class. Regular students can only fetch their own conversations. Supervisors can fetch student conversations by providing `student_id`, but cannot view conversations belonging to other supervisors.
 
 **Query Parameters:**
 
-| Param      | Type     | Required | Description        |
-| ---------- | -------- | -------- | ------------------ |
-| `class_id` | `number` | Yes      | The class to filter by |
+| Param        | Type     | Required | Description        |
+| ------------ | -------- | -------- | ------------------ |
+| `class_id`   | `number` | Yes      | The class to filter by |
+| `student_id` | `string` | No       | Target student ID (defaults to requesting user's ID) |
 
 **Response (200):**
 
@@ -292,6 +387,7 @@ Returns all conversations for the authenticated user within a specific class.
 | ------ | ----------- |
 | `200`  | Array of conversations (may be empty) |
 | `401`  | Missing or invalid token |
+| `403`  | Requester is not a supervisor in the class OR target user is another supervisor |
 | `500`  | Server error |
 
 ---
