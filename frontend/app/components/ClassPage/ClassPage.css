@@ -233,7 +233,7 @@
 }
 
 .back-btn {
-    position: fixed;
+    position: absolute;
     top: 1rem;
     left: 1rem;
     background-color: rgb(116, 0, 204);
@@ -261,6 +261,18 @@
     .conversations-container, .members-container {
         flex: none;
         width: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .back-btn-text {
+        display: none;
+    }
+    
+    .back-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 1.2rem;
+        line-height: 1;
     }
 }
 

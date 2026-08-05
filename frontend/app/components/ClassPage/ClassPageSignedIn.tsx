@@ -220,7 +220,9 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                     </form>
                 )}
                 <h3>Welcome to your course, {userName}{isSupervisor && " (Supervisor)"}</h3>
-                <button className="back-btn" onClick={() => navigate('/user-dashboard')}>← Back to Dashboard</button>
+                <button className="back-btn" onClick={() => navigate('/user-dashboard')} aria-label="Back to Dashboard">
+                    ←<span className="back-btn-text"> Back to Dashboard</span>
+                </button>
             </div>
             
             <div className='class-page-layout'>

@@ -11,20 +11,47 @@
     position: absolute;
     top: 20px;
     right: 20px;
+    margin-bottom: 20px;
+    z-index: 100;
 }
 
-p {
+.user-badge-name {
     color: white;
     margin-left: 10px;
+    margin-right: 0;
+    white-space: nowrap;
 }
 
 .sign-out-btn {
     background-color: rgb(38, 0, 255);
     height: 45px;
     border-radius: 30px;
+    padding: 0 16px;
+    color: white;
+    border: none;
+    cursor: pointer;
 }
 
 .sign-out-btn:hover {
     background-color: rgb(24, 0, 161);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+    .user-badge-name {
+        display: none;
+    }
+
+    .user-badge {
+        top: 10px;
+        right: 10px;
+        height: 36px;
+        background-color: transparent;
+    }
+
+    .sign-out-btn {
+        height: 36px;
+        padding: 0 12px;
+        font-size: 0.85rem;
+    }
 }
