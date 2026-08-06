@@ -4,6 +4,50 @@ import { AppError } from '../errors/AppError';
 export class ConversationRepository {
     constructor(private supabase: SupabaseClient) {}
 
+    async create(title: string, studentId: string, classId: string, startedAt: string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .insert([{title, student_id: studentId, class_id: classId, started_at: startedAt}])
+            .select();
+
+        if(error || !data || data.length === 0) {
+            console.error(error);
+            throw new AppError('Failed to create conversation', 500);
+        }
+
+        return data[0];
+    }
+
+    async findById(conversationId: number) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .single();
+
+        if (error) {
+            return null;
+        }
+
+        return data;
+    }
+
+    async updateTitle(conversationId: number, title: string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .update({ title })
+            .eq('conversation_id', conversationId)
+            .select()
+            .single();
+
+        if (error || !data) {
+            console.error(error);
+            throw new AppError('Failed to update conversation', 500);
+        }
+
+        return data;
+    }
+
     async findByStudentAndClass(studentId: string, classId: string) {
         const { data, error } = await this.supabase
             .from('Conversation')

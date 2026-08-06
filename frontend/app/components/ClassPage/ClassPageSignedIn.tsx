@@ -164,6 +164,10 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         }
     };
 
+    const handleCreateConvo = async() => {
+        
+    }
+
     if (!clsData) {
         return null;
     }
@@ -227,16 +231,20 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
             
             <div className='class-page-layout'>
                 <div className='conversations-container'>
-                    {isSupervisor && !selectedMember ? (
-                        <h2>Select a student or supervisor to view their conversations:</h2>
-                    ) : (
-                        <h2>
-                            {isSupervisor && selectedMember 
-                                ? `Conversations for ${selectedMember.name}${selectedMember.user_id === currUserId ? " (You)" : ""}:` 
-                                : 'Your conversations:'
-                            }
-                        </h2>
-                    )}
+                    <div className='conversations-container-header'>
+                        {isSupervisor && !selectedMember ? (
+                            <h2>Select a student or supervisor to view their conversations:</h2>
+                        ) : (
+                            <h2>
+                                {isSupervisor && selectedMember 
+                                    ? `Conversations for ${selectedMember.name}${selectedMember.user_id === currUserId ? " (You)" : ""}:` 
+                                    : 'Your conversations:'
+                                }
+                            </h2>
+                        )}
+
+                        <button className='new-convo-button' onClick={() => handleCreateConvo()}>+ New</button>
+                    </div>
                     
                     {conversations.map(cnv => (
                         <ConversationCard key={cnv.conversation_id} title={new Date(cnv.started_at).toLocaleString()}/>

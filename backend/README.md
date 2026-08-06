@@ -421,6 +421,56 @@ Returns conversations within a specific class. Regular students can only fetch t
 | `403`  | Requester is not a supervisor in the class OR target user is another supervisor |
 | `500`  | Server error |
 
+#### `POST /conversations` (or `POST /conversations/create-conversation`)
+
+Creates a new conversation record for a student within a class.
+
+**Request Body / Query Parameters:**
+
+| Field        | Type     | Required | Description |
+| ------------ | -------- | -------- | ----------- |
+| `class_id`   | `string` | Yes      | Class ID |
+| `student_id` | `string` | No       | Student ID (defaults to requesting user's ID) |
+| `title`      | `string` | No       | Custom title (defaults to `"New Conversation"`) |
+
+**Response (201):**
+
+```json
+{
+  "conversation_id": 1,
+  "title": "New Conversation",
+  "student_id": "abc-123",
+  "class_id": "5",
+  "started_at": "1785987600000"
+}
+```
+
+---
+
+#### `PATCH /conversations/:conversationId`
+
+Updates the title of an existing conversation.
+
+**Request Body:**
+
+```json
+{
+  "title": "Updated Conversation Title"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "conversation_id": 1,
+  "title": "Updated Conversation Title",
+  "student_id": "abc-123",
+  "class_id": "5",
+  "started_at": "1785987600000"
+}
+```
+
 ---
 
 ### Root
