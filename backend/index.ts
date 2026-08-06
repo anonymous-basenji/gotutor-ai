@@ -33,7 +33,7 @@ const messageRepo = new MessageRepository(supabase);
 // Services
 const authService = new AuthService(userRepo, supabase);
 const classService = new ClassService(classRepo, membershipRepo, userRepo, conversationRepo, messageRepo);
-const conversationService = new ConversationService(conversationRepo, membershipRepo);
+const conversationService = new ConversationService(conversationRepo, membershipRepo, messageRepo);
 
 // Controllers
 const authController = new AuthController(authService);

@@ -253,7 +253,7 @@
     font-style: italic;
 }
 
-.back-btn {
+.class-page-back-btn {
     position: absolute;
     top: 1rem;
     left: 1rem;
@@ -267,7 +267,7 @@
     transition: background-color 0.2s;
 }
 
-.back-btn:hover {
+.class-page-back-btn:hover {
     background-color: rgba(116, 0, 204, 0.668);
 }
 
@@ -290,7 +290,7 @@
         display: none;
     }
     
-    .back-btn {
+    .class-page-back-btn {
         padding: 0.5rem 0.8rem;
         font-size: 1.2rem;
         line-height: 1;

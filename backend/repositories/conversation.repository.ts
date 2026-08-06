@@ -7,18 +7,18 @@ export class ConversationRepository {
     async create(title: string, studentId: string, classId: string, startedAt: string) {
         const { data, error } = await this.supabase
             .from('Conversation')
-            .insert([{title, student_id: studentId, class_id: classId, started_at: startedAt}])
+            .insert([{ title, student_id: studentId, class_id: classId, started_at: startedAt }])
             .select();
 
-        if(error || !data || data.length === 0) {
-            console.error(error);
-            throw new AppError('Failed to create conversation', 500);
+        if (error || !data || data.length === 0) {
+            console.error('Failed to create conversation in DB:', error);
+            throw new AppError(error?.message ? `Failed to create conversation: ${error.message}` : 'Failed to create conversation', 500);
         }
 
         return data[0];
     }
 
-    async findById(conversationId: number) {
+    async findById(conversationId: number | string) {
         const { data, error } = await this.supabase
             .from('Conversation')
             .select('*')
@@ -26,13 +26,14 @@ export class ConversationRepository {
             .single();
 
         if (error) {
+            console.error('ConversationRepository.findById error for id:', conversationId, error);
             return null;
         }
 
         return data;
     }
 
-    async updateTitle(conversationId: number, title: string) {
+    async updateTitle(conversationId: number | string, title: string) {
         const { data, error } = await this.supabase
             .from('Conversation')
             .update({ title })

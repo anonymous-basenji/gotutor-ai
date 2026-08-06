@@ -8,9 +8,10 @@ import AddStudentForm from './AddStudentForm';
 import './ClassPage.css'
 
 interface Conversation {
-    conversation_id: number;
+    conversation_id: number | string;
+    title?: string;
     student_id: string;
-    class_id: number;
+    class_id: number | string;
     started_at: string;
 }
 
@@ -164,9 +165,33 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         }
     };
 
-    const handleCreateConvo = async() => {
-        
-    }
+    const handleCreateConvo = async () => {
+        if (!clsData) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/conversations`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ class_id: clsData.class_id })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.conversation_id) {
+                    navigate(`/conversation/${data.conversation_id}`);
+                }
+            } else {
+                console.error('Failed to create conversation:', response.status);
+            }
+        } catch (e) {
+            console.error('Error creating conversation:', e);
+        }
+    };
 
     if (!clsData) {
         return null;
@@ -224,7 +249,7 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                     </form>
                 )}
                 <h3>Welcome to your course, {userName}{isSupervisor && " (Supervisor)"}</h3>
-                <button className="back-btn" onClick={() => navigate('/user-dashboard')} aria-label="Back to Dashboard">
+                <button className="class-page-back-btn" onClick={() => navigate('/user-dashboard')} aria-label="Back to Dashboard">
                     ←<span className="back-btn-text"> Back to Dashboard</span>
                 </button>
             </div>
@@ -247,7 +272,11 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                     </div>
                     
                     {conversations.map(cnv => (
-                        <ConversationCard key={cnv.conversation_id} title={new Date(cnv.started_at).toLocaleString()}/>
+                        <ConversationCard 
+                            key={cnv.conversation_id} 
+                            conversationId={cnv.conversation_id} 
+                            title={cnv.title || "New Conversation"}
+                        />
                     ))}
                     
                     {(!isSupervisor || selectedMember) && conversations.length === 0 && (
