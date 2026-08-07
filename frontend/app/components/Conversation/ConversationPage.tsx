@@ -129,7 +129,9 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
 
             if (!response.ok || !response.body) {
                 const errJson = await response.json().catch(() => ({}));
-                throw new Error(errJson.error || 'Failed to generate response.');
+                const fullErrorMsg = errJson.error || `An error occurred and your response could not be completed (Code: ${response.status})`;
+                console.error('[Streaming Error Dump] Backend HTTP Status:', response.status, 'Body:', errJson);
+                throw new Error(fullErrorMsg);
             }
 
             const reader = response.body.getReader();
@@ -178,8 +180,8 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                 }
             }
         } catch (e: any) {
-            console.error('Streaming error:', e);
-            setError(e.message || 'Something went wrong.');
+            console.error('[Streaming Failure Dump] Detailed error object:', e);
+            setError(e.message || 'An error occurred and your response could not be completed.');
             updateChatHistory(prev => prev.filter(m => m.id !== assistantPlaceholderId));
         } finally {
             setLoadingStatus(false);

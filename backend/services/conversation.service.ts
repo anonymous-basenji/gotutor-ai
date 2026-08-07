@@ -91,10 +91,8 @@ export class ConversationService {
             throw new ForbiddenError('Access denied: Only the owner of this conversation can send messages');
         }
 
-        // Save user message to database
         await this.messageRepo.create(conversationId, 'user', userContent);
 
-        // Fetch entire message history
         const history = await this.messageRepo.findByConversationId(conversationId);
         const formattedMessages = history.map(m => ({
             role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -115,34 +113,16 @@ export class ConversationService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                models: [
-                    'inclusionai/ling-3.0-tiny:free',
-                    'meta-llama/llama-3.3-70b-instruct:free',
-                    'google/gemma-2-9b-it:free'
-                ],
+                model: 'inclusionai/ling-3.0-tiny:free',
                 messages: formattedMessages,
                 stream: true,
-                provider: {
-                    allow_fallbacks: true
-                }
             }),
         });
 
         if (!openRouterRes.ok || !openRouterRes.body) {
             const errText = await openRouterRes.text();
             console.error('[OpenRouter Error Dump] Status:', openRouterRes.status, 'Body:', errText);
-            
-            let parsedMsg = errText || 'Failed to generate response from OpenRouter';
-            try {
-                const parsed = JSON.parse(errText);
-                const errObj = parsed.error || parsed;
-                const msg = errObj.message || errText;
-                const metadataStr = errObj.metadata ? ` | Details: ${JSON.stringify(errObj.metadata)}` : '';
-                parsedMsg = `${msg}${metadataStr}`;
-            } catch (e) {
-                // fallback to raw text
-            }
-            throw new AppError(`OpenRouter (${openRouterRes.status}): ${parsedMsg}`, 502);
+            throw new AppError(`An error occurred and your response could not be completed (Code: ${openRouterRes.status})`, openRouterRes.status || 502);
         }
 
         let fullAssistantText = '';
@@ -150,7 +130,8 @@ export class ConversationService {
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
 
-        while (true) {
+        let isStreamDone = false;
+        while (!isStreamDone) {
             const { value, done } = await reader.read();
             if (done) break;
 
@@ -162,7 +143,10 @@ export class ConversationService {
                 const trimmed = line.trim();
                 if (!trimmed || !trimmed.startsWith('data: ')) continue;
                 const jsonStr = trimmed.replace(/^data:\s*/, '');
-                if (jsonStr === '[DONE]') break;
+                if (jsonStr === '[DONE]') {
+                    isStreamDone = true;
+                    break;
+                }
 
                 try {
                     const parsed = JSON.parse(jsonStr);
@@ -183,13 +167,16 @@ export class ConversationService {
         }
 
         // Auto-generate conversation title if the title is still default
-        const isDefaultTitle = !conversation.title || conversation.title === 'New Conversation';
+        const rawTitleStr = conversation?.title ? String(conversation.title).trim().toLowerCase() : '';
+        const isDefaultTitle = !rawTitleStr || rawTitleStr === 'new conversation' || rawTitleStr === 'conversation';
+        
+        console.log('[Title Gen Check]', { rawTitle: conversation?.title, isDefaultTitle, assistantLength: fullAssistantText?.length });
         
         if (isDefaultTitle && fullAssistantText) {
             const userMsg = userContent;
-            const assistantMsg = fullAssistantText;
 
             try {
+                console.log('[Title Gen] Sending title generation request to OpenRouter...');
                 const titleRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -199,43 +186,59 @@ export class ConversationService {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        models: [
-                            'inclusionai/ling-3.0-tiny:free',
-                            'meta-llama/llama-3.3-70b-instruct:free',
-                            'google/gemma-2-9b-it:free'
-                        ],
+                        model: 'inclusionai/ling-3.0-tiny:free',
                         messages: [
                             {
                                 role: 'system',
-                                content: 'Generate a concise conversation title (2-6 words). Return only the title.'
+                                content: 'Summarize the user question into a concise 2-5 word title. Return ONLY the title text, nothing else. No quotes, no preamble.'
                             },
                             {
                                 role: 'user',
-                                content: `User:\n${userMsg}\n\nAssistant:\n${assistantMsg}`
+                                content: userMsg
                             }
                         ],
-                        max_tokens: 12,
-                        provider: {
-                            allow_fallbacks: true
-                        }
+                        max_tokens: 250,
                     }),
                 });
 
+                console.log('[Title Gen] Response status:', titleRes.status, titleRes.ok);
+
                 if (titleRes.ok) {
                     const titleData = await titleRes.json();
-                    let rawTitle = titleData.choices?.[0]?.message?.content?.trim();
+                    console.log('[Title Gen] Response body:', JSON.stringify(titleData));
+                    const choice = titleData.choices?.[0];
+                    let rawTitle = choice?.message?.content?.trim();
+
+                    // If content is null, extract first quoted candidate title from reasoning string
+                    if (!rawTitle && choice?.message?.reasoning) {
+                        const quoteMatch = choice.message.reasoning.match(/"([^"]{3,40})"/);
+                        if (quoteMatch && quoteMatch[1]) {
+                            rawTitle = quoteMatch[1].trim();
+                        }
+                    }
+
                     if (rawTitle) {
-                        rawTitle = rawTitle.replace(/^["']|["']$/g, '').replace(/^Title:\s*/i, '').trim();
+                        rawTitle = rawTitle
+                            .replace(/^["']|["']$/g, '')
+                            .replace(/^(title|subject):\s*/i, '')
+                            .replace(/^(the user|the assistant|here is|summary):\s*/i, '')
+                            .trim();
+                        const words = rawTitle.split(/\s+/);
+                        if (words.length > 6) {
+                            rawTitle = words.slice(0, 6).join(' ');
+                        }
                         console.log('[Title Gen Success] New title:', rawTitle);
                         await this.conversationRepo.updateTitle(conversationId, rawTitle);
                         return { fullContent: fullAssistantText, newTitle: rawTitle };
+                    } else {
+                        console.warn('[Title Gen] Could not extract rawTitle from content or reasoning');
                     }
                 } else {
                     const titleErrText = await titleRes.text();
                     console.warn(`[Title Gen Error Dump] Status ${titleRes.status}:`, titleErrText);
                 }
             } catch (err) {
-                console.warn('Failed to generate conversation title:', err);
+                console.warn('[Title Gen] Exception thrown:', err);
             }
         }
 
