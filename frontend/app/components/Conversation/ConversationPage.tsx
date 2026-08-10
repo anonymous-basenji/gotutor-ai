@@ -111,7 +111,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
         
         updateChatHistory([
             ...initialHistory,
-            { id: assistantPlaceholderId, role: 'assistant', content: '...' }
+            { id: assistantPlaceholderId, role: 'assistant', content: 'Thinking...' }
         ]);
 
         try {
@@ -235,7 +235,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                 </form>
 
                 <div className='disclaimer'>
-                    <p><strong>Chats are not private. Do not enter private/confidential information.</strong></p>
+                    <p><strong>Chats are not private. Your supervisor can read your chat messages. Do not enter private/confidential information.</strong></p>
                 </div>
             </div>
         </div>

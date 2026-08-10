@@ -113,9 +113,10 @@ export class ConversationService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'inclusionai/ling-3.0-tiny:free',
+                model: 'nvidia/nemotron-nano-9b-v2:free',
                 messages: formattedMessages,
                 stream: true,
+                include_reasoning: false,
             }),
         });
 
@@ -131,6 +132,8 @@ export class ConversationService {
         let buffer = '';
 
         let isStreamDone = false;
+        let isFirstChunk = true;
+
         while (!isStreamDone) {
             const { value, done } = await reader.read();
             if (done) break;
@@ -150,10 +153,18 @@ export class ConversationService {
 
                 try {
                     const parsed = JSON.parse(jsonStr);
-                    const chunkText = parsed.choices?.[0]?.delta?.content || parsed.text || '';
+                    let chunkText = parsed.choices?.[0]?.delta?.content || parsed.text || '';
                     if (chunkText) {
-                        fullAssistantText += chunkText;
-                        onChunk(chunkText);
+                        if (isFirstChunk) {
+                            chunkText = chunkText.replace(/^[\r\n]+/, '');
+                            if (chunkText) {
+                                isFirstChunk = false;
+                            }
+                        }
+                        if (chunkText) {
+                            fullAssistantText += chunkText;
+                            onChunk(chunkText);
+                        }
                     }
                 } catch (e) {
                     // ignore partial JSON parse error
@@ -186,18 +197,21 @@ export class ConversationService {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        model: 'inclusionai/ling-3.0-tiny:free',
+                        model: 'google/gemma-3-4b-it',
                         messages: [
                             {
                                 role: 'system',
-                                content: 'Summarize the user question into a concise 2-5 word title. Return ONLY the title text, nothing else. No quotes, no preamble.'
+                                content: 'Output ONLY a 2-5 word title for the user prompt. Never output options, reasoning, thoughts, or preamble. Just the title text.'
                             },
                             {
                                 role: 'user',
-                                content: userMsg
+                                content: `User prompt: "${userMsg}"`
                             }
                         ],
-                        max_tokens: 250,
+                        max_tokens: 10,
+                        reasoning: {
+                            effort: 'none'
+                        }
                     }),
                 });
 
@@ -209,11 +223,11 @@ export class ConversationService {
                     const choice = titleData.choices?.[0];
                     let rawTitle = choice?.message?.content?.trim();
 
-                    // If content is null, extract first quoted candidate title from reasoning string
-                    if (!rawTitle && choice?.message?.reasoning) {
-                        const quoteMatch = choice.message.reasoning.match(/"([^"]{3,40})"/);
-                        if (quoteMatch && quoteMatch[1]) {
-                            rawTitle = quoteMatch[1].trim();
+                    if (!rawTitle) {
+                        const cleanMsg = userMsg.replace(/[^\w\s]/g, '').trim();
+                        const words = cleanMsg.split(/\s+/).filter(Boolean);
+                        if (words.length > 0) {
+                            rawTitle = words.slice(0, 5).join(' ');
                         }
                     }
 
@@ -227,11 +241,13 @@ export class ConversationService {
                         if (words.length > 6) {
                             rawTitle = words.slice(0, 6).join(' ');
                         }
+                        // Capitalize first letter of words for clean UI title format
+                        rawTitle = rawTitle.replace(/\b\w/g, (l: string) => l.toUpperCase());
                         console.log('[Title Gen Success] New title:', rawTitle);
                         await this.conversationRepo.updateTitle(conversationId, rawTitle);
                         return { fullContent: fullAssistantText, newTitle: rawTitle };
                     } else {
-                        console.warn('[Title Gen] Could not extract rawTitle from content or reasoning');
+                        console.warn('[Title Gen] choice.message.content was empty/null');
                     }
                 } else {
                     const titleErrText = await titleRes.text();
