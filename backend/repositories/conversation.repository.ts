@@ -54,7 +54,8 @@ export class ConversationRepository {
             .from('Conversation')
             .select('*')
             .eq('student_id', studentId)
-            .eq('class_id', classId);
+            .eq('class_id', classId)
+            .order('started_at', { ascending: false });
 
         if (error) {
             console.error(error);

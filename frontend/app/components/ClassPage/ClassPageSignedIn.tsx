@@ -44,7 +44,12 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
 
             if (response.ok) {
                 const data: Conversation[] = await response.json();
-                setConversations(data);
+                const sorted = [...data].sort((a, b) => {
+                    const timeA = a.started_at ? new Date(a.started_at).getTime() : Number(a.conversation_id) || 0;
+                    const timeB = b.started_at ? new Date(b.started_at).getTime() : Number(b.conversation_id) || 0;
+                    return timeB - timeA;
+                });
+                setConversations(sorted);
             } else {
                 console.error('Failed to fetch conversations:', response.status);
             }

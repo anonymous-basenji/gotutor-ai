@@ -21,6 +21,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
     const [isLoading, setLoadingStatus] = useState(false);
     const [error, setError] = useState('');
     const [conversationTitle, setConversationTitle] = useState('Conversation');
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     const streamingMessageRef = useRef('');
     const chatHistoryRef = useRef<HTMLDivElement | null>(null);
@@ -29,6 +30,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
     const fetchConversationDetail = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+        const currentUserId = session?.user?.id;
 
         try {
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/conversations/${conversationId}`, {
@@ -40,9 +42,14 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
 
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.title) {
-                    setConversationTitle(data.title);
-                    document.title = `${data.title} - GoTutor.ai`;
+                if (data) {
+                    if (data.title) {
+                        setConversationTitle(data.title);
+                        document.title = `${data.title} - GoTutor.ai`;
+                    }
+                    if (data.student_id && currentUserId) {
+                        setIsReadOnly(data.student_id !== currentUserId);
+                    }
                 }
             }
         } catch (e) {
@@ -92,7 +99,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isLoading || !inputValue.trim()) return;
+        if (isLoading || isReadOnly || !inputValue.trim()) return;
 
         const userText = inputValue.trim();
         updateInputValue('');
@@ -219,17 +226,23 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
 
                 {error && <div className='error-banner'>{error}</div>}
 
+                {isReadOnly && (
+                    <div className='read-only-banner'>
+                        <span>🔒 Read-Only Mode: You are viewing a student's conversation. Sending messages is disabled.</span>
+                    </div>
+                )}
+
                 <form className='submit-form' onSubmit={handleSubmit}>
                     <input 
                         name='chat-input' 
                         className='chat-input' 
                         type='text' 
-                        placeholder='Chat with GoTutor AI...' 
+                        placeholder={isReadOnly ? "Read-only mode: Only the conversation owner can send messages" : "Chat with GoTutor AI..."} 
                         value={inputValue} 
                         onChange={(e) => updateInputValue(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isLoading || isReadOnly}
                     />
-                    <button className='submit-btn' type='submit' disabled={isLoading || !inputValue.trim()}>
+                    <button className='submit-btn' type='submit' disabled={isLoading || isReadOnly || !inputValue.trim()}>
                         {isLoading ? '...' : 'Send'}
                     </button>
                 </form>

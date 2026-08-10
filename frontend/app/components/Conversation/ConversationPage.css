@@ -182,6 +182,18 @@
     text-align: center;
 }
 
+.read-only-banner {
+    background: rgba(255, 193, 7, 0.18);
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    color: #ffe082;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    text-align: center;
+    font-weight: 500;
+}
+
 @media (max-width: 768px) {
     .conversation-main-content {
         width: 95%;
