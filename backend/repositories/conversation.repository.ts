@@ -78,6 +78,18 @@ export class ConversationRepository {
         return data;
     }
 
+    async deleteById(conversationId: number | string) {
+        const { error } = await this.supabase
+            .from('Conversation')
+            .delete()
+            .eq('conversation_id', conversationId);
+
+        if (error) {
+            console.error('Failed to delete conversation from DB:', error);
+            throw new AppError('Failed to delete conversation', 500);
+        }
+    }
+
     async deleteByIds(conversationIds: number[]) {
         const { error } = await this.supabase
             .from('Conversation')

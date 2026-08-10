@@ -170,6 +170,35 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         }
     };
 
+    const handleDeleteConversation = async (conversationId: number | string) => {
+        if (!window.confirm('Are you sure you want to delete this conversation? This will permanently remove all messages inside it.')) {
+            return;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/conversations/${conversationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                setConversations(prev => prev.filter(c => c.conversation_id !== conversationId));
+            } else {
+                const errData = await response.json().catch(() => ({}));
+                window.alert(errData.error || 'Failed to delete conversation.');
+            }
+        } catch (e) {
+            console.error('Error deleting conversation:', e);
+            window.alert('An error occurred while deleting the conversation.');
+        }
+    };
+
     const handleCreateConvo = async () => {
         if (!clsData) return;
         const { data: { session } } = await supabase.auth.getSession();
@@ -276,13 +305,21 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                         <button className='new-convo-button' onClick={() => handleCreateConvo()}>+ New</button>
                     </div>
                     
-                    {conversations.map(cnv => (
-                        <ConversationCard 
-                            key={cnv.conversation_id} 
-                            conversationId={cnv.conversation_id} 
-                            title={cnv.title || "New Conversation"}
-                        />
-                    ))}
+                    {conversations.map(cnv => {
+                        const isOwner = cnv.student_id === currUserId;
+                        const targetIsSupervisor = selectedMember && selectedMember.role === 'supervisor';
+                        const canDelete = isOwner || (isSupervisor && selectedMember && !targetIsSupervisor);
+
+                        return (
+                            <ConversationCard 
+                                key={cnv.conversation_id} 
+                                conversationId={cnv.conversation_id} 
+                                title={cnv.title || "New Conversation"}
+                                canDelete={canDelete}
+                                onDelete={() => handleDeleteConversation(cnv.conversation_id)}
+                            />
+                        );
+                    })}
                     
                     {(!isSupervisor || selectedMember) && conversations.length === 0 && (
                         <p className='no-conversations-msg'>No conversations started yet.</p>

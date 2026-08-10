@@ -76,6 +76,35 @@ export class ConversationService {
         return await this.messageRepo.findByConversationId(conversationId);
     }
 
+    async deleteConversation(requesterId: string, conversationId: number | string) {
+        const conversation = await this.conversationRepo.findById(conversationId);
+        if (!conversation) {
+            throw new NotFoundError('Conversation not found');
+        }
+
+        const isOwner = conversation.student_id === requesterId;
+
+        if (!isOwner) {
+            const requesterIsSupervisor = await this.membershipRepo.isSupervisor(requesterId, conversation.class_id);
+            if (!requesterIsSupervisor) {
+                throw new ForbiddenError('Access denied: Only the conversation owner or a class supervisor can delete this conversation');
+            }
+
+            const ownerIsSupervisor = await this.membershipRepo.isSupervisor(conversation.student_id, conversation.class_id);
+            if (ownerIsSupervisor) {
+                throw new ForbiddenError('Access denied: Supervisors cannot delete conversations belonging to another supervisor');
+            }
+        }
+
+        // Recursively delete associated messages first
+        await this.messageRepo.deleteByConversationIds([conversationId]);
+
+        // Then delete the conversation row
+        await this.conversationRepo.deleteById(conversationId);
+
+        return { message: 'Conversation deleted successfully' };
+    }
+
     async sendMessageStream(
         requesterId: string, 
         conversationId: number | string, 

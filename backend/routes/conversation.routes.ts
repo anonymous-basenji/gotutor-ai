@@ -11,6 +11,7 @@ export const createConversationRoutes = (controller: ConversationController, req
     router.patch('/:conversationId', requireAuth, controller.updateConversation);
     router.get('/:conversationId/messages', requireAuth, controller.getMessages);
     router.post('/:conversationId/messages', requireAuth, controller.sendMessage);
+    router.delete('/:conversationId', requireAuth, controller.deleteConversation);
 
     return router;
 };

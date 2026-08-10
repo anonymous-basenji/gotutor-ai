@@ -74,6 +74,12 @@ export class ConversationController {
         res.status(200).json(messages);
     };
 
+    deleteConversation = async (req: Request, res: Response): Promise<void> => {
+        const conversationId = parseConversationId(req.params.conversationId);
+        const result = await this.conversationService.deleteConversation(req.userId, conversationId);
+        res.status(200).json(result);
+    };
+
     sendMessage = async (req: Request, res: Response): Promise<void> => {
         const conversationId = parseConversationId(req.params.conversationId);
 
