@@ -2,6 +2,61 @@ import { ConversationRepository } from '../repositories/conversation.repository'
 import { MembershipRepository } from '../repositories/membership.repository';
 import { MessageRepository } from '../repositories/message.repository';
 import { ForbiddenError, NotFoundError, AppError } from '../errors/AppError';
+const pdfParseModule = require('pdf-parse');
+
+async function parsePdfBuffer(buffer: Buffer): Promise<string> {
+    if (typeof pdfParseModule === 'function') {
+        const res = await pdfParseModule(buffer);
+        return res?.text ? res.text.trim() : '';
+    } else if (pdfParseModule?.PDFParse) {
+        const parser = new pdfParseModule.PDFParse({ data: buffer });
+        const res = await parser.getText();
+        if (typeof res === 'string') return res.trim();
+        if (res?.text) return res.text.trim();
+        if (Array.isArray(res?.pages)) return res.pages.map((p: any) => p.text || '').join('\n').trim();
+    } else if (typeof pdfParseModule?.default === 'function') {
+        const res = await pdfParseModule.default(buffer);
+        return res?.text ? res.text.trim() : '';
+    }
+    return '';
+}
+
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
+async function extractDocumentText(url: string, fileName?: string, fileType?: string): Promise<string> {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new AppError(`Unable to fetch attached file "${fileName || 'document'}"`, 400);
+    }
+
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES) {
+        throw new AppError(`File "${fileName || 'document'}" exceeds the 50MB size limit.`, 400);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_FILE_SIZE_BYTES) {
+        throw new AppError(`File "${fileName || 'document'}" exceeds the 50MB size limit.`, 400);
+    }
+
+    const isPdf = (fileType && fileType.toLowerCase().includes('pdf')) || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+
+    if (isPdf) {
+        const buffer = Buffer.from(arrayBuffer);
+        const text = await parsePdfBuffer(buffer);
+        if (text) {
+            return `[Extracted Content of PDF "${fileName || 'document.pdf'}"]:\n---\n${text}\n---`;
+        }
+        throw new AppError(`PDF file "${fileName || 'document.pdf'}" contains no extractable text.`, 400);
+    } else {
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(arrayBuffer).trim();
+        if (text) {
+            return `[Extracted Content of Document "${fileName || 'Document'}"]:\n---\n${text}\n---`;
+        }
+        throw new AppError(`Document "${fileName || 'Document'}" is empty.`, 400);
+    }
+}
 
 export class ConversationService {
     constructor(
@@ -109,7 +164,10 @@ export class ConversationService {
         requesterId: string, 
         conversationId: number | string, 
         userContent: string, 
-        onChunk: (chunk: string) => void
+        onChunk: (chunk: string) => void,
+        attachmentUrl?: string,
+        attachmentName?: string,
+        attachmentType?: string,
     ) {
         const conversation = await this.conversationRepo.findById(conversationId);
         if (!conversation) {
@@ -120,12 +178,39 @@ export class ConversationService {
             throw new ForbiddenError('Access denied: Only the owner of this conversation can send messages');
         }
 
-        await this.messageRepo.create(conversationId, 'user', userContent);
+        await this.messageRepo.create(
+            conversationId, 
+            'user', 
+            userContent, 
+            attachmentUrl, 
+            attachmentName, 
+            attachmentType
+        );
 
         const history = await this.messageRepo.findByConversationId(conversationId);
-        const formattedMessages = history.map(m => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content,
+        const formattedMessages = await Promise.all(history.map(async m => {
+            if (m.attachment_url) {
+                if (m.attachment_type?.startsWith('image/')) {
+                    return {
+                        role: m.role === 'assistant' ? 'assistant' : 'user',
+                        content: [
+                            { type: 'text', text: m.content || 'Attached image' },
+                            { type: 'image_url', image_url: { url: m.attachment_url } }
+                        ]
+                    };
+                } else {
+                    const docText = await extractDocumentText(m.attachment_url, m.attachment_name, m.attachment_type);
+                    const fullPrompt = m.content ? `${m.content}\n\n${docText}` : docText;
+                    return {
+                        role: m.role === 'assistant' ? 'assistant' : 'user',
+                        content: fullPrompt,
+                    };
+                }
+            }
+            return {
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content || '',
+            };
         }));
 
         const apiKey = process.env.OPENROUTER_API_KEY;
@@ -142,7 +227,7 @@ export class ConversationService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'nvidia/nemotron-nano-9b-v2:free',
+                model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
                 messages: formattedMessages,
                 stream: true,
                 include_reasoning: false,

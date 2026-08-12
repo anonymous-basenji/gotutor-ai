@@ -43,7 +43,14 @@ const conversationController = new ConversationController(conversationService);
 // Express App
 export const app = express();
 app.use(cors({
-    origin: process.env.VITE_FRONTEND_URL,
+    origin: (origin, callback) => {
+        if (!origin || origin.includes('localhost') || origin.includes('ngrok')) {
+            callback(null, true);
+        } else {
+            callback(null, process.env.VITE_FRONTEND_URL || true);
+        }
+    },
+    credentials: true,
 }));
 app.use(express.json());
 

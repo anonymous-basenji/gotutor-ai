@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ConversationService } from '../services/conversation.service';
 import { BadRequestError } from '../errors/AppError';
-import { createConversationSchema, updateConversationSchema } from '../schemas/conversation.schemas';
+import { createConversationSchema, updateConversationSchema, sendMessageSchema } from '../schemas/conversation.schemas';
 
 const parseConversationId = (param: string | string[] | undefined): number | string => {
     const str = Array.isArray(param) ? param[0] : param;
@@ -83,10 +83,8 @@ export class ConversationController {
     sendMessage = async (req: Request, res: Response): Promise<void> => {
         const conversationId = parseConversationId(req.params.conversationId);
 
-        const content = req.body?.content || req.body?.message;
-        if (!content || typeof content !== 'string' || !content.trim()) {
-            throw new BadRequestError('Message content is required');
-        }
+        const body = sendMessageSchema.parse(req.body);
+        const content = (body.content || '').trim();
 
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
@@ -95,10 +93,13 @@ export class ConversationController {
         const result = await this.conversationService.sendMessageStream(
             req.userId,
             conversationId,
-            content.trim(),
+            content,
             (chunkText: string) => {
                 res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-            }
+            },
+            body.attachment_url,
+            body.attachment_name,
+            body.attachment_type,
         );
 
         if (result && result.newTitle) {

@@ -113,6 +113,54 @@
     margin-bottom: 0.8rem;
 }
 
+.attachment-btn {
+    padding: 0.85rem 1rem;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attachment-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.attachment-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.file-preview-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(0, 180, 219, 0.25);
+    border: 1px solid rgba(0, 180, 219, 0.5);
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+    color: #e0f7fa;
+    font-size: 0.88rem;
+    align-self: flex-start;
+}
+
+.remove-file-btn {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 2px;
+}
+
+.remove-file-btn:hover {
+    color: #ff3333;
+}
+
 .chat-input {
     flex: 1;
     padding: 0.85rem 1.2rem;

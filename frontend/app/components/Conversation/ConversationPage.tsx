@@ -9,6 +9,9 @@ interface MessageItem {
     id: string | number;
     role: 'user' | 'assistant';
     content: string;
+    attachment_url?: string;
+    attachment_name?: string;
+    attachment_type?: string;
 }
 
 interface ConversationPageProps {
@@ -22,9 +25,11 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
     const [error, setError] = useState('');
     const [conversationTitle, setConversationTitle] = useState('Conversation');
     const [isReadOnly, setIsReadOnly] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const streamingMessageRef = useRef('');
     const chatHistoryRef = useRef<HTMLDivElement | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const navigate = useNavigate();
 
     const fetchConversationDetail = async () => {
@@ -71,10 +76,24 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
 
             if (res.ok) {
                 const data = await res.json();
-                const mapped: MessageItem[] = data.map((msg: any) => ({
-                    id: msg.message_id || msg.id || Math.random(),
-                    role: msg.role === 'assistant' ? 'assistant' : 'user',
-                    content: msg.content,
+                const mapped: MessageItem[] = await Promise.all(data.map(async (msg: any) => {
+                    let url = msg.attachment_url;
+                    if (url && !url.startsWith('http')) {
+                        const { data: signedData } = await supabase.storage
+                            .from('chat-attachments')
+                            .createSignedUrl(url, 604800);
+                        if (signedData?.signedUrl) {
+                            url = signedData.signedUrl;
+                        }
+                    }
+                    return {
+                        id: msg.message_id || msg.id || Math.random(),
+                        role: msg.role === 'assistant' ? 'assistant' : 'user',
+                        content: msg.content,
+                        attachment_url: url,
+                        attachment_name: msg.attachment_name,
+                        attachment_type: msg.attachment_type,
+                    };
                 }));
                 updateChatHistory(mapped);
             } else {
@@ -96,21 +115,72 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
         }
     }, [chatHistory, isLoading]);
 
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                setError(`File "${file.name}" exceeds the 50MB size limit.`);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                return;
+            }
+            setError('');
+            setSelectedFile(file);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isLoading || isReadOnly || !inputValue.trim()) return;
+        if (isLoading || isReadOnly || (!inputValue.trim() && !selectedFile)) return;
 
         const userText = inputValue.trim();
-        updateInputValue('');
         setError('');
         setLoadingStatus(true);
         streamingMessageRef.current = '';
+
+        let attachmentUrl: string | undefined;
+        let attachmentName: string | undefined;
+        let attachmentType: string | undefined;
+
+        if (selectedFile) {
+            attachmentName = selectedFile.name;
+            attachmentType = selectedFile.type;
+            const fileExt = selectedFile.name.split('.').pop();
+            const filePath = `attachments/${conversationId}/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+            const { error: uploadErr } = await supabase.storage.from('chat-attachments').upload(filePath, selectedFile);
+            if (uploadErr) {
+                console.error('Failed to upload attachment:', uploadErr);
+                setError('Failed to upload file attachment.');
+                setLoadingStatus(false);
+                return;
+            }
+
+            const { data: signedUrlData, error: signedUrlErr } = await supabase.storage
+                .from('chat-attachments')
+                .createSignedUrl(filePath, 604800);
+
+            if (signedUrlData?.signedUrl) {
+                attachmentUrl = signedUrlData.signedUrl;
+            } else {
+                console.warn('createSignedUrl failed, falling back to getPublicUrl:', signedUrlErr);
+                const { data: publicUrlData } = supabase.storage.from('chat-attachments').getPublicUrl(filePath);
+                attachmentUrl = publicUrlData?.publicUrl;
+            }
+        }
+
+        updateInputValue('');
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
 
         const userMessage: MessageItem = {
             id: Date.now(),
             role: 'user',
             content: userText,
+            attachment_url: attachmentUrl,
+            attachment_name: attachmentName,
+            attachment_type: attachmentType,
         };
 
         const assistantPlaceholderId = Date.now() + 1;
@@ -131,7 +201,12 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ content: userText })
+                body: JSON.stringify({ 
+                    content: userText,
+                    attachment_url: attachmentUrl,
+                    attachment_name: attachmentName,
+                    attachment_type: attachmentType,
+                })
             });
 
             if (!response.ok || !response.body) {
@@ -219,6 +294,9 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                                 key={chatBubble.id} 
                                 role={chatBubble.role} 
                                 message={chatBubble.content}
+                                attachmentUrl={chatBubble.attachment_url}
+                                attachmentName={chatBubble.attachment_name}
+                                attachmentType={chatBubble.attachment_type}
                             />
                         ))
                     )}
@@ -232,7 +310,29 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                     </div>
                 )}
 
+                {selectedFile && (
+                    <div className="file-preview-badge">
+                        <span>📎 {selectedFile.name}</span>
+                        <button type="button" className="remove-file-btn" onClick={() => setSelectedFile(null)}>✕</button>
+                    </div>
+                )}
+
                 <form className='submit-form' onSubmit={handleSubmit}>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        style={{ display: 'none' }} 
+                        onChange={handleFileSelect} 
+                    />
+                    <button 
+                        type="button" 
+                        className="attachment-btn" 
+                        title="Attach file" 
+                        onClick={() => fileInputRef.current?.click()} 
+                        disabled={isLoading || isReadOnly}
+                    >
+                        📎
+                    </button>
                     <input 
                         name='chat-input' 
                         className='chat-input' 
@@ -242,7 +342,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                         onChange={(e) => updateInputValue(e.target.value)}
                         disabled={isLoading || isReadOnly}
                     />
-                    <button className='submit-btn' type='submit' disabled={isLoading || isReadOnly || !inputValue.trim()}>
+                    <button className='submit-btn' type='submit' disabled={isLoading || isReadOnly || (!inputValue.trim() && !selectedFile)}>
                         {isLoading ? '...' : 'Send'}
                     </button>
                 </form>

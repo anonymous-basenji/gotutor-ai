@@ -19,13 +19,23 @@ export class MessageRepository {
         return data || [];
     }
 
-    async create(conversationId: number | string, role: 'user' | 'assistant', content: string) {
+    async create(
+        conversationId: number | string, 
+        role: 'user' | 'assistant', 
+        content: string,
+        attachmentUrl?: string,
+        attachmentName?: string,
+        attachmentType?: string,
+    ) {
         const { data, error } = await this.supabase
             .from('Message')
             .insert([{
                 conversation_id: conversationId,
                 role,
                 content,
+                attachment_url: attachmentUrl || null,
+                attachment_name: attachmentName || null,
+                attachment_type: attachmentType || null,
                 timestamp: new Date().toISOString(),
             }])
             .select()
