@@ -114,14 +114,28 @@
 }
 
 .attachment-btn {
-    padding: 0.85rem 1rem;
-    font-size: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 0.9rem;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     color: white;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+.attachment-icon {
+    width: 20px;
+    height: 20px;
+    filter: invert(1);
+}
+
+.attachment-icon-small {
+    width: 16px;
+    height: 16px;
+    filter: invert(1);
 }
 
 .attachment-btn:hover:not(:disabled) {

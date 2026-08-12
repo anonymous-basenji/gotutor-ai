@@ -312,7 +312,8 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
 
                 {selectedFile && (
                     <div className="file-preview-badge">
-                        <span>📎 {selectedFile.name}</span>
+                        <img src="/attachment-svgrepo-com.svg" alt="Attachment" className="attachment-icon-small" />
+                        <span>{selectedFile.name}</span>
                         <button type="button" className="remove-file-btn" onClick={() => setSelectedFile(null)}>✕</button>
                     </div>
                 )}
@@ -331,7 +332,7 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                         onClick={() => fileInputRef.current?.click()} 
                         disabled={isLoading || isReadOnly}
                     >
-                        📎
+                        <img src="/attachment-svgrepo-com.svg" alt="Attach" className="attachment-icon" />
                     </button>
                     <input 
                         name='chat-input' 
