@@ -227,7 +227,7 @@ export class ConversationService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+                model: 'nvidia/nemotron-3-nano-30b-a3b:free',
                 messages: formattedMessages,
                 stream: true,
                 include_reasoning: false,

@@ -96,6 +96,11 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                     };
                 }));
                 updateChatHistory(mapped);
+                setTimeout(() => {
+                    if (chatHistoryRef.current) {
+                        chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+                    }
+                }, 50);
             } else {
                 console.error('Failed to fetch messages:', res.status);
             }
@@ -108,12 +113,6 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
         fetchConversationDetail();
         fetchMessages();
     }, [conversationId]);
-
-    useEffect(() => {
-        if (chatHistoryRef.current) {
-            chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
-        }
-    }, [chatHistory, isLoading]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -190,6 +189,12 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
             ...initialHistory,
             { id: assistantPlaceholderId, role: 'assistant', content: 'Thinking...' }
         ]);
+
+        setTimeout(() => {
+            if (chatHistoryRef.current) {
+                chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+            }
+        }, 50);
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
