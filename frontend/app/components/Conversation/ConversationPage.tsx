@@ -30,7 +30,16 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
     const streamingMessageRef = useRef('');
     const chatHistoryRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
     const navigate = useNavigate();
+
+    const handleStopStreaming = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        setLoadingStatus(false);
+    };
 
     const fetchConversationDetail = async () => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -196,6 +205,9 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
             }
         }, 50);
 
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
@@ -211,7 +223,8 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                     attachment_url: attachmentUrl,
                     attachment_name: attachmentName,
                     attachment_type: attachmentType,
-                })
+                }),
+                signal: controller.signal,
             });
 
             if (!response.ok || !response.body) {
@@ -267,10 +280,19 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                 }
             }
         } catch (e: any) {
-            console.error('[Streaming Failure Dump] Detailed error object:', e);
-            setError(e.message || 'An error occurred and your response could not be completed.');
-            updateChatHistory(prev => prev.filter(m => m.id !== assistantPlaceholderId));
+            const isAborted = e.name === 'AbortError' || controller.signal.aborted;
+            if (isAborted) {
+                console.log('[Streaming Aborted by User]');
+                if (!streamingMessageRef.current) {
+                    updateChatHistory(prev => prev.filter(m => m.id !== assistantPlaceholderId));
+                }
+            } else {
+                console.error('[Streaming Failure Dump] Detailed error object:', e);
+                setError(e.message || 'An error occurred and your response could not be completed.');
+                updateChatHistory(prev => prev.filter(m => m.id !== assistantPlaceholderId));
+            }
         } finally {
+            abortControllerRef.current = null;
             setLoadingStatus(false);
         }
     };
@@ -348,9 +370,24 @@ function ConversationPage({ conversationId }: ConversationPageProps) {
                         onChange={(e) => updateInputValue(e.target.value)}
                         disabled={isLoading || isReadOnly}
                     />
-                    <button className='submit-btn' type='submit' disabled={isLoading || isReadOnly || (!inputValue.trim() && !selectedFile)}>
-                        {isLoading ? '...' : 'Send'}
-                    </button>
+                    {isLoading ? (
+                        <button 
+                            className='submit-btn stop-btn' 
+                            type='button' 
+                            onClick={handleStopStreaming}
+                            title="Stop response"
+                        >
+                            ⏹ Stop
+                        </button>
+                    ) : (
+                        <button 
+                            className='submit-btn' 
+                            type='submit' 
+                            disabled={isReadOnly || (!inputValue.trim() && !selectedFile)}
+                        >
+                            Send
+                        </button>
+                    )}
                 </form>
 
                 <div className='disclaimer'>

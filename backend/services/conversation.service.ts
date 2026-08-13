@@ -168,6 +168,7 @@ export class ConversationService {
         attachmentUrl?: string,
         attachmentName?: string,
         attachmentType?: string,
+        signal?: AbortSignal,
     ) {
         const conversation = await this.conversationRepo.findById(conversationId);
         if (!conversation) {
@@ -232,6 +233,7 @@ export class ConversationService {
                 stream: true,
                 include_reasoning: false,
             }),
+            signal,
         });
 
         if (!openRouterRes.ok || !openRouterRes.body) {
@@ -248,47 +250,67 @@ export class ConversationService {
         let isStreamDone = false;
         let isFirstChunk = true;
 
-        while (!isStreamDone) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || !trimmed.startsWith('data: ')) continue;
-                const jsonStr = trimmed.replace(/^data:\s*/, '');
-                if (jsonStr === '[DONE]') {
-                    isStreamDone = true;
+        try {
+            while (!isStreamDone) {
+                if (signal?.aborted) {
                     break;
                 }
 
-                try {
-                    const parsed = JSON.parse(jsonStr);
-                    let chunkText = parsed.choices?.[0]?.delta?.content || parsed.text || '';
-                    if (chunkText) {
-                        if (isFirstChunk) {
-                            chunkText = chunkText.replace(/^[\r\n]+/, '');
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const jsonStr = trimmed.replace(/^data:\s*/, '');
+                    if (jsonStr === '[DONE]') {
+                        isStreamDone = true;
+                        break;
+                    }
+
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        let chunkText = parsed.choices?.[0]?.delta?.content || parsed.text || '';
+                        if (chunkText) {
+                            if (isFirstChunk) {
+                                chunkText = chunkText.replace(/^[\r\n]+/, '');
+                                if (chunkText) {
+                                    isFirstChunk = false;
+                                }
+                            }
                             if (chunkText) {
-                                isFirstChunk = false;
+                                fullAssistantText += chunkText;
+                                onChunk(chunkText);
                             }
                         }
-                        if (chunkText) {
-                            fullAssistantText += chunkText;
-                            onChunk(chunkText);
-                        }
+                    } catch (e) {
+                        // ignore partial JSON parse error
                     }
-                } catch (e) {
-                    // ignore partial JSON parse error
                 }
             }
+        } catch (streamErr: any) {
+            if (signal?.aborted || streamErr.name === 'AbortError') {
+                console.log(`[Stream Aborted] Client cancelled stream for conversation ${conversationId}`);
+            } else {
+                throw streamErr;
+            }
+        } finally {
+            try {
+                reader.releaseLock();
+            } catch {}
         }
 
         // Save assistant response to database
         if (fullAssistantText) {
             await this.messageRepo.create(conversationId, 'assistant', fullAssistantText);
+        }
+
+        if (signal?.aborted) {
+            return null;
         }
 
         // Auto-generate conversation title if the title is still default

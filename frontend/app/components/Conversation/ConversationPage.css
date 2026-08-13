@@ -222,6 +222,20 @@
     box-shadow: none;
 }
 
+.submit-btn.stop-btn {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.submit-btn.stop-btn:hover {
+    background: linear-gradient(135deg, #f56565, #e53e3e);
+    box-shadow: 0 6px 16px rgba(229, 62, 62, 0.6);
+}
+
 .disclaimer {
     text-align: center;
     color: rgba(255, 255, 255, 0.65);

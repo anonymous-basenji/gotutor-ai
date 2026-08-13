@@ -90,23 +90,45 @@ export class ConversationController {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        const result = await this.conversationService.sendMessageStream(
-            req.userId,
-            conversationId,
-            content,
-            (chunkText: string) => {
-                res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-            },
-            body.attachment_url,
-            body.attachment_name,
-            body.attachment_type,
-        );
+        const abortController = new AbortController();
+        req.on('close', () => {
+            if (!res.writableEnded) {
+                abortController.abort();
+            }
+        });
 
-        if (result && result.newTitle) {
-            res.write(`data: ${JSON.stringify({ title: result.newTitle })}\n\n`);
+        try {
+            const result = await this.conversationService.sendMessageStream(
+                req.userId,
+                conversationId,
+                content,
+                (chunkText: string) => {
+                    if (!res.writableEnded) {
+                        res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+                    }
+                },
+                body.attachment_url,
+                body.attachment_name,
+                body.attachment_type,
+                abortController.signal,
+            );
+
+            if (!res.writableEnded) {
+                if (result && result.newTitle) {
+                    res.write(`data: ${JSON.stringify({ title: result.newTitle })}\n\n`);
+                }
+
+                res.write('data: [DONE]\n\n');
+                res.end();
+            }
+        } catch (e: any) {
+            if (abortController.signal.aborted) {
+                if (!res.writableEnded) {
+                    res.end();
+                }
+                return;
+            }
+            throw e;
         }
-
-        res.write('data: [DONE]\n\n');
-        res.end();
     };
 }
