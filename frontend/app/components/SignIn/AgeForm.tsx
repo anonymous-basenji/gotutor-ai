@@ -6,9 +6,15 @@ import './AgeForm.css';
 
 function AgeForm({ user, onComplete }: { user: User | null | undefined, onComplete: Function }) {
     const [dob, setDob] = useState('');    
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     const createUser = async(dob: string) => {
         if(!user) {
+            return;
+        }
+
+        if(!acceptedTerms) {
+            alert("You must agree to the Terms of Service to proceed.");
             return;
         }
 
@@ -29,7 +35,8 @@ function AgeForm({ user, onComplete }: { user: User | null | undefined, onComple
                 },
                 body: JSON.stringify({
                     "name": user.user_metadata?.full_name || user.email,
-                    "date_of_birth": dob
+                    "date_of_birth": dob,
+                    "accepted_terms": acceptedTerms
                 })
             });
 
@@ -56,7 +63,17 @@ function AgeForm({ user, onComplete }: { user: User | null | undefined, onComple
         <div className="age-form">
             <h4>Enter your birth date to proceed: </h4>
             <input className="date-input" type="date" onChange={(e) => setDob(e.target.value)}></input>
-            <button className="submit-btn" onClick={() => createUser(dob)}>Submit</button>
+            <div style={{ marginTop: '15px' }}>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    />
+                    {' '}I agree to the <a href="/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                </label>
+            </div>
+            <button className="submit-btn" disabled={!acceptedTerms || !dob} onClick={() => createUser(dob)}>Submit</button>
         </div>
     )
 }

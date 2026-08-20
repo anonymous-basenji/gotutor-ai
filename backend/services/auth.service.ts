@@ -37,4 +37,24 @@ export class AuthService {
             isAdult: calculateAge(new Date(user.date_of_birth)) >= 18,
         };
     }
+
+    async checkName(userId: string) {
+        const { data: { user: authUser }, error: authError } = await this.supabase.auth.admin.getUserById(userId);
+        if (authError || !authUser) {
+            throw new NotFoundError('User auth record not found');
+        }
+
+        const dbUser = await this.userRepo.findById(userId);
+        if (!dbUser) {
+            throw new NotFoundError('Profile not found');
+        }
+
+        const currentName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email || '';
+        if (currentName && currentName !== dbUser.name) {
+            await this.userRepo.updateName(userId, currentName);
+            return { updated: true, name: currentName };
+        }
+
+        return { updated: false, name: dbUser.name };
+    }
 }

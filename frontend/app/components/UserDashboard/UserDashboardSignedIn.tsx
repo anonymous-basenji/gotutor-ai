@@ -98,7 +98,26 @@ function UserDashboardSignedIn({ user }: { user: User }) {
         }
     };
 
+    const checkName = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        try {
+            await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/check-name`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (e) {
+            console.error("Error checking user name:", e);
+        }
+    };
+
     useEffect(() => {
+        checkName();
         fetchClasses();
     }, []);
 

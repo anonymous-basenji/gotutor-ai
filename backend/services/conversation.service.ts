@@ -219,6 +219,12 @@ export class ConversationService {
             throw new AppError('OpenRouter API key missing', 500);
         }
 
+        const systemPrompt = process.env.SYSTEM_PROMPT;
+        const messages = [
+            ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+            ...formattedMessages,
+        ];
+
         const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -228,8 +234,8 @@ export class ConversationService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'nvidia/nemotron-3-nano-30b-a3b:free',
-                messages: formattedMessages,
+                model: process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
+                messages,
                 stream: true,
                 include_reasoning: false,
             }),
@@ -333,7 +339,7 @@ export class ConversationService {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        model: 'google/gemma-3-4b-it',
+                        model: process.env.OPENROUTER_TITLE_MODEL || 'google/gemma-3-4b-it',
                         messages: [
                             {
                                 role: 'system',
@@ -344,10 +350,7 @@ export class ConversationService {
                                 content: `User prompt: "${userMsg}"`
                             }
                         ],
-                        max_tokens: 10,
-                        reasoning: {
-                            effort: 'none'
-                        }
+                        max_tokens: 20
                     }),
                 });
 
