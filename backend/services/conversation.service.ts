@@ -2,7 +2,21 @@ import { ConversationRepository } from '../repositories/conversation.repository'
 import { MembershipRepository } from '../repositories/membership.repository';
 import { MessageRepository } from '../repositories/message.repository';
 import { ForbiddenError, NotFoundError, AppError } from '../errors/AppError';
+import * as fs from 'fs';
+import * as path from 'path';
 const pdfParseModule = require('pdf-parse');
+
+function getSystemPrompt(): string {
+    try {
+        const promptPath = path.join(__dirname, '../prompts/tutor.txt');
+        if (fs.existsSync(promptPath)) {
+            return fs.readFileSync(promptPath, 'utf-8').trim();
+        }
+    } catch (e) {
+        console.warn('[System Prompt] Error reading prompts/tutor.txt:', e);
+    }
+    return process.env.SYSTEM_PROMPT || '';
+}
 
 async function parsePdfBuffer(buffer: Buffer): Promise<string> {
     if (typeof pdfParseModule === 'function') {
@@ -224,7 +238,7 @@ export class ConversationService {
             throw new AppError('OpenRouter API key missing', 500);
         }
 
-        const systemPrompt = process.env.SYSTEM_PROMPT;
+        const systemPrompt = getSystemPrompt();
         const messages = [
             ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
             ...(conversation.summary ? [{ role: 'system', content: `[Context summary of earlier conversation]:\n${conversation.summary}` }] : []),
