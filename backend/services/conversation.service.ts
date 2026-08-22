@@ -189,7 +189,12 @@ export class ConversationService {
         );
 
         const history = await this.messageRepo.findByConversationId(conversationId);
-        const formattedMessages = await Promise.all(history.map(async m => {
+        const RECENT_MESSAGE_LIMIT = 25;
+        const recentHistory = history.length > RECENT_MESSAGE_LIMIT
+            ? history.slice(-RECENT_MESSAGE_LIMIT)
+            : history;
+
+        const formattedMessages = await Promise.all(recentHistory.map(async m => {
             if (m.attachment_url) {
                 if (m.attachment_type?.startsWith('image/')) {
                     return {
@@ -222,8 +227,11 @@ export class ConversationService {
         const systemPrompt = process.env.SYSTEM_PROMPT;
         const messages = [
             ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+            ...(conversation.summary ? [{ role: 'system', content: `[Context summary of earlier conversation]:\n${conversation.summary}` }] : []),
             ...formattedMessages,
         ];
+
+        const maxTokens = parseInt(process.env.OPENROUTER_MAX_TOKENS || '800', 10);
 
         const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -234,10 +242,13 @@ export class ConversationService {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
+                model: process.env.OPENROUTER_MODEL || 'openai/gpt-5.6-luna',
+                session_id: `conv_${conversationId}`,
                 messages,
+                max_tokens: maxTokens,
                 stream: true,
-                include_reasoning: false,
+                stream_options: { include_usage: true },
+                reasoning: { effort: 'low' },
             }),
             signal,
         });
@@ -280,6 +291,12 @@ export class ConversationService {
 
                     try {
                         const parsed = JSON.parse(jsonStr);
+                        if (parsed.usage) {
+                            const { prompt_tokens, completion_tokens, prompt_tokens_details } = parsed.usage;
+                            const cached = prompt_tokens_details?.cached_tokens ?? 0;
+                            console.log(`[Token Usage] Conv: ${conversationId} | Prompt: ${prompt_tokens} (Cached: ${cached}) | Completion: ${completion_tokens}`);
+                        }
+
                         let chunkText = parsed.choices?.[0]?.delta?.content || parsed.text || '';
                         if (chunkText) {
                             if (isFirstChunk) {
@@ -313,10 +330,18 @@ export class ConversationService {
         // Save assistant response to database
         if (fullAssistantText) {
             await this.messageRepo.create(conversationId, 'assistant', fullAssistantText);
+            await this.conversationRepo.touchLastActive(conversationId);
         }
 
         if (signal?.aborted) {
             return null;
+        }
+
+        // Asynchronously update summary when conversation history exceeds limit
+        if (history.length >= RECENT_MESSAGE_LIMIT && history.length % 5 === 0) {
+            this.generateSummary(conversationId, history, conversation.summary, apiKey).catch(err => {
+                console.warn('[Summary Gen Error]', err);
+            });
         }
 
         // Auto-generate conversation title if the title is still default
@@ -398,5 +423,55 @@ export class ConversationService {
         }
 
         return { fullContent: fullAssistantText };
+    }
+
+    private async generateSummary(
+        conversationId: number | string,
+        history: any[],
+        existingSummary: string | null | undefined,
+        apiKey: string
+    ) {
+        try {
+            const olderHistory = history.slice(0, -15);
+            const olderTurns = olderHistory.map(m => `${m.role}: ${m.content || ''}`).join('\n');
+            const summaryPrompt = existingSummary
+                ? `Existing summary:\n${existingSummary}\n\nAdditional conversation turns:\n${olderTurns}\n\nUpdate the concise bulleted summary of pedagogical context, student understanding, problem progress, and sticking points.`
+                : `Conversation turns:\n${olderTurns}\n\nWrite a concise bulleted summary of pedagogical context, student understanding, problem progress, and sticking points.`;
+
+            const summaryRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
+                    'X-Title': 'GoTutor.ai',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: process.env.OPENROUTER_MODEL || 'openai/gpt-5.6-luna',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a pedagogical summarizer. Maintain a dense, factual summary of the student\'s progress, solved problems, misconceptions, and current focus. Keep it under 200 words.'
+                        },
+                        {
+                            role: 'user',
+                            content: summaryPrompt
+                        }
+                    ],
+                    max_tokens: 300,
+                }),
+            });
+
+            if (summaryRes.ok) {
+                const data = await summaryRes.json();
+                const newSummary = data.choices?.[0]?.message?.content?.trim();
+                if (newSummary) {
+                    console.log(`[Summary Gen Success] Updated summary for conv ${conversationId}`);
+                    await this.conversationRepo.updateSummary(conversationId, newSummary);
+                }
+            }
+        } catch (e) {
+            console.warn('[Summary Gen Exception]', e);
+        }
     }
 }

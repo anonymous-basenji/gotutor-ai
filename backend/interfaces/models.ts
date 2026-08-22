@@ -21,6 +21,9 @@ export interface Conversation {
     student_id: string;
     class_id: string;
     started_at: string;
+    title?: string;
+    summary?: string | null;
+    last_active_at?: string | null;
 }
 
 export interface Message {

@@ -49,6 +49,36 @@ export class ConversationRepository {
         return data;
     }
 
+    async updateSummary(conversationId: number | string, summary: string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .update({ 
+                summary, 
+                last_active_at: new Date().toISOString() 
+            })
+            .eq('conversation_id', conversationId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('ConversationRepository.updateSummary error:', error);
+            return null;
+        }
+
+        return data;
+    }
+
+    async touchLastActive(conversationId: number | string) {
+        const { error } = await this.supabase
+            .from('Conversation')
+            .update({ last_active_at: new Date().toISOString() })
+            .eq('conversation_id', conversationId);
+
+        if (error) {
+            console.error('ConversationRepository.touchLastActive error:', error);
+        }
+    }
+
     async findByStudentAndClass(studentId: string, classId: string) {
         const { data, error } = await this.supabase
             .from('Conversation')
