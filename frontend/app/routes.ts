@@ -6,4 +6,5 @@ export default [
   route("terms-of-service", "routes/terms.tsx"),
   route("user-dashboard", "routes/user-dashboard.tsx"),
   route("class/:classId", "routes/class.$classId.tsx"),
+  route("conversation/:conversationId", "routes/conversation.$conversationId.tsx"),
 ] satisfies RouteConfig;

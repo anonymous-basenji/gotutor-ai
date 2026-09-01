@@ -4,12 +4,88 @@ import { AppError } from '../errors/AppError';
 export class ConversationRepository {
     constructor(private supabase: SupabaseClient) {}
 
+    async create(title: string, studentId: string, classId: string, startedAt: string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .insert([{ title, student_id: studentId, class_id: classId, started_at: startedAt }])
+            .select();
+
+        if (error || !data || data.length === 0) {
+            console.error('Failed to create conversation in DB:', error);
+            throw new AppError(error?.message ? `Failed to create conversation: ${error.message}` : 'Failed to create conversation', 500);
+        }
+
+        return data[0];
+    }
+
+    async findById(conversationId: number | string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .single();
+
+        if (error) {
+            console.error('ConversationRepository.findById error for id:', conversationId, error);
+            return null;
+        }
+
+        return data;
+    }
+
+    async updateTitle(conversationId: number | string, title: string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .update({ title })
+            .eq('conversation_id', conversationId)
+            .select()
+            .single();
+
+        if (error || !data) {
+            console.error(error);
+            throw new AppError('Failed to update conversation', 500);
+        }
+
+        return data;
+    }
+
+    async updateSummary(conversationId: number | string, summary: string) {
+        const { data, error } = await this.supabase
+            .from('Conversation')
+            .update({ 
+                summary, 
+                last_active_at: new Date().toISOString() 
+            })
+            .eq('conversation_id', conversationId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('ConversationRepository.updateSummary error:', error);
+            return null;
+        }
+
+        return data;
+    }
+
+    async touchLastActive(conversationId: number | string) {
+        const { error } = await this.supabase
+            .from('Conversation')
+            .update({ last_active_at: new Date().toISOString() })
+            .eq('conversation_id', conversationId);
+
+        if (error) {
+            console.error('ConversationRepository.touchLastActive error:', error);
+        }
+    }
+
     async findByStudentAndClass(studentId: string, classId: string) {
         const { data, error } = await this.supabase
             .from('Conversation')
             .select('*')
             .eq('student_id', studentId)
-            .eq('class_id', classId);
+            .eq('class_id', classId)
+            .order('started_at', { ascending: false });
 
         if (error) {
             console.error(error);
@@ -30,6 +106,18 @@ export class ConversationRepository {
         }
 
         return data;
+    }
+
+    async deleteById(conversationId: number | string) {
+        const { error } = await this.supabase
+            .from('Conversation')
+            .delete()
+            .eq('conversation_id', conversationId);
+
+        if (error) {
+            console.error('Failed to delete conversation from DB:', error);
+            throw new AppError('Failed to delete conversation', 500);
+        }
     }
 
     async deleteByIds(conversationIds: number[]) {

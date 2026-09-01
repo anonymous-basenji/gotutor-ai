@@ -21,11 +21,15 @@ export interface Conversation {
     student_id: string;
     class_id: string;
     started_at: string;
+    title?: string;
+    summary?: string | null;
+    last_active_at?: string | null;
 }
 
 export interface Message {
-    id: number;
-    conversation_id: number;
+    message_id?: string;
+    id?: number | string;
+    conversation_id: number | string;
     role: 'user' | 'assistant';
     content: string;
     timestamp: string;

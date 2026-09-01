@@ -63,4 +63,18 @@ export class UserRepository {
             throw new AppError('Failed to delete user', 500);
         }
     }
+
+    async updateName(userId: string, name: string) {
+        const { data, error } = await this.supabase
+            .from('User')
+            .update({ name })
+            .eq('user_id', userId)
+            .select();
+
+        if (error) {
+            throw new AppError('Failed to update user name', 500);
+        }
+
+        return data;
+    }
 }

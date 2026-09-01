@@ -1,6 +1,6 @@
 # GoTutor.ai — Backend
 
-REST API server for GoTutor.ai, an AI-powered tutoring platform. Built with **Express 5**, **TypeScript**, and **Supabase**.
+REST API server for GoTutor.ai, an AI-powered tutoring platform. Built with **Express 5**, **TypeScript**, **Zod**, and **Supabase**.
 
 ## Tech Stack
 
@@ -9,19 +9,48 @@ REST API server for GoTutor.ai, an AI-powered tutoring platform. Built with **Ex
 | Runtime         | Node.js                      |
 | Language        | TypeScript 6                 |
 | Framework       | Express 5                    |
+| Validation      | Zod 4                        |
 | Database / Auth | Supabase (PostgreSQL + Auth) |
 | Dev Runner      | tsx (watch mode)              |
 
 ## Project Structure
 
+The backend follows a layered Controller-Service-Repository architecture:
+
 ```
 backend/
-├── index.ts            # Express app setup, CORS, route mounting, server start
-├── db.ts               # Supabase client initialization & TypeScript interfaces
-├── routes/
-│   ├── auth.ts             # User registration (sync-user) & profile retrieval
-│   ├── classes.ts          # Class CRUD, membership, and roster queries
-│   └── conversations.ts   # Fetch conversations for a user within a class
+├── controllers/            # Controller layer: Handles HTTP requests/responses & inputs
+│   ├── auth.controller.ts
+│   ├── class.controller.ts
+│   └── conversation.controller.ts
+├── services/               # Service layer: Business logic & authorization checks
+│   ├── auth.service.ts
+│   ├── class.service.ts
+│   └── conversation.service.ts
+├── repositories/           # Repository layer: Database queries via Supabase client
+│   ├── class.repository.ts
+│   ├── conversation.repository.ts
+│   ├── membership.repository.ts
+│   ├── message.repository.ts
+│   └── user.repository.ts
+├── routes/                 # Express route definitions & middleware wiring
+│   ├── auth.routes.ts
+│   ├── class.routes.ts
+│   └── conversation.routes.ts
+├── schemas/                # Zod validation schemas and DTO types
+│   ├── auth.schemas.ts
+│   └── class.schemas.ts
+├── middleware/             # Express middlewares (JWT auth, error handler)
+│   ├── auth.middleware.ts
+│   └── errorHandler.middleware.ts
+├── errors/                 # Custom error handling classes (AppError)
+│   └── AppError.ts
+├── interfaces/             # TypeScript domain models and interface types
+│   └── models.ts
+├── utils/                  # Helper utilities (age calculation, etc.)
+│   └── age.ts
+├── db.ts                   # Supabase client initialization
+├── index.ts                # Express app setup, CORS, route mounting, server entry point
 ├── package.json
 └── tsconfig.json
 ```
@@ -64,18 +93,18 @@ The backend interacts with the following Supabase tables:
 
 ### `User`
 
-| Column          | Type     | Notes             |
-| --------------- | -------- | ----------------- |
+| Column          | Type     | Notes                         |
+| --------------- | -------- | ----------------------------- |
 | `user_id`       | `string` | PK, matches Supabase Auth UID |
-| `email`         | `string` | Unique            |
-| `name`          | `string` |                   |
-| `date_of_birth` | `string` |                   |
+| `email`         | `string` | Unique                        |
+| `name`          | `string` |                               |
+| `date_of_birth` | `string` |                               |
 
 ### `Class`
 
 | Column     | Type     | Notes |
 | ---------- | -------- | ----- |
-| `class_id` | `number` | PK    |
+| `class_id` | `string` | PK    |
 | `name`     | `string` |       |
 
 ### `UserClass`
@@ -83,7 +112,7 @@ The backend interacts with the following Supabase tables:
 | Column     | Type     | Notes                                  |
 | ---------- | -------- | -------------------------------------- |
 | `user_id`  | `string` | FK → `User`                           |
-| `class_id` | `number` | FK → `Class`                          |
+| `class_id` | `string` | FK → `Class`                          |
 | `role`     | `string` | `"supervisor"` or `"student"`          |
 
 *Composite unique constraint on `(user_id, class_id)`.*
@@ -93,8 +122,8 @@ The backend interacts with the following Supabase tables:
 | Column            | Type     | Notes        |
 | ----------------- | -------- | ------------ |
 | `conversation_id` | `number` | PK           |
-| `student_id`      | `number` | FK → `User`  |
-| `class_id`        | `number` | FK → `Class` |
+| `student_id`      | `string` | FK → `User`  |
+| `class_id`        | `string` | FK → `Class` |
 | `started_at`      | `string` | Timestamp    |
 
 ### `Message`
@@ -109,7 +138,7 @@ The backend interacts with the following Supabase tables:
 
 ## API Reference
 
-All endpoints require a `Bearer` token in the `Authorization` header (Supabase Auth JWT).
+All protected endpoints require a `Bearer` token in the `Authorization` header (Supabase Auth JWT). Incoming requests are validated against Zod schemas, returning `400 Bad Request` on validation failure.
 
 ---
 
@@ -133,10 +162,9 @@ Creates or links a user profile after signup. Enforces a **minimum age of 13** �
 | Status | Description |
 | ------ | ----------- |
 | `200`  | User profile created/synced — returns the user row |
-| `400`  | Invalid date of birth |
+| `400`  | Invalid date of birth or missing fields |
 | `401`  | Missing or invalid token |
 | `403`  | User is under 13 (account deleted) |
-| `409`  | Duplicate email conflict |
 | `500`  | Server error |
 
 ---
@@ -149,6 +177,7 @@ Returns the authenticated user's profile, including a computed `isAdult` boolean
 
 ```json
 {
+  "user_id": "abc-123",
   "name": "Jane Doe",
   "email": "jane@example.com",
   "date_of_birth": "2005-03-15",
@@ -196,7 +225,7 @@ Returns all classes the authenticated user belongs to, including their role and 
 ```json
 [
   {
-    "class_id": 1,
+    "class_id": "1",
     "role": "student",
     "name": "Intro to Calculus",
     "supervisor": "Prof. Smith"
@@ -249,7 +278,7 @@ Adds the authenticated user to a class with a given role. Uses upsert with `igno
 
 ```json
 {
-  "class_id": 1,
+  "class_id": "1",
   "role": "student"
 }
 ```
@@ -271,7 +300,7 @@ Adds a user to a class by their email address with an optional `role` (`"student
 
 ```json
 {
-  "class_id": 1,
+  "class_id": "1",
   "email": "user@example.com",
   "role": "supervisor"
 }
@@ -280,7 +309,7 @@ Adds a user to a class by their email address with an optional `role` (`"student
 | Status | Description |
 | ------ | ----------- |
 | `201`  | User added successfully |
-| `400`  | Role must be student or supervisor |
+| `400`  | Invalid parameters or missing required fields |
 | `401`  | Missing or invalid token |
 | `403`  | Requester is not a supervisor OR target user is under 18 (when adding a supervisor) |
 | `404`  | No registered user found with that email |
@@ -290,22 +319,24 @@ Adds a user to a class by their email address with an optional `role` (`"student
 
 #### `DELETE /classes/remove-user`
 
-Removes a user from a class. If removing a student, requires the requester to be a supervisor. If removing a supervisor, only that exact supervisor can remove themselves, and there must be at least one other supervisor remaining in the class.
+Removes a user from a class. Target user ID can be supplied in `user_id`, `target_user_id`, or `student_id`. If removing a student, requires the requester to be a supervisor. If removing a supervisor, only that exact supervisor can remove themselves, and there must be at least one other supervisor remaining in the class.
 
 **Request Body:**
 
 ```json
 {
-  "class_id": 1,
+  "class_id": "1",
   "user_id": "abc-123",
   "role": "supervisor"
 }
 ```
 
+*Note: `target_user_id` or `student_id` are also accepted as aliases for `user_id`.*
+
 | Status | Description |
 | ------ | ----------- |
 | `200`  | User successfully removed |
-| `400`  | `class_id` and `user_id` are required |
+| `400`  | `class_id` and target user ID are required |
 | `401`  | Missing or invalid token |
 | `403`  | Requester is not a supervisor (for student removal), requester is not self (for supervisor removal), or attempting to remove the last supervisor |
 | `500`  | Server error |
@@ -320,7 +351,7 @@ Deletes a class and all associated data (conversations, messages, class membersh
 
 ```json
 {
-  "class_id": 1
+  "class_id": "1"
 }
 ```
 
@@ -342,7 +373,7 @@ Renames an existing class. **Requires class supervisor role**.
 
 ```json
 {
-  "class_id": 1,
+  "class_id": "1",
   "new_name": "Calculus II"
 }
 ```
@@ -367,7 +398,7 @@ Returns conversations within a specific class. Regular students can only fetch t
 
 | Param        | Type     | Required | Description        |
 | ------------ | -------- | -------- | ------------------ |
-| `class_id`   | `number` | Yes      | The class to filter by |
+| `class_id`   | `string` | Yes      | The class to filter by |
 | `student_id` | `string` | No       | Target student ID (defaults to requesting user's ID) |
 
 **Response (200):**
@@ -377,7 +408,7 @@ Returns conversations within a specific class. Regular students can only fetch t
   {
     "conversation_id": 1,
     "student_id": "abc-123",
-    "class_id": 5,
+    "class_id": "5",
     "started_at": "2026-07-06T12:00:00Z"
   }
 ]
@@ -389,6 +420,56 @@ Returns conversations within a specific class. Regular students can only fetch t
 | `401`  | Missing or invalid token |
 | `403`  | Requester is not a supervisor in the class OR target user is another supervisor |
 | `500`  | Server error |
+
+#### `POST /conversations` (or `POST /conversations/create-conversation`)
+
+Creates a new conversation record for a student within a class.
+
+**Request Body / Query Parameters:**
+
+| Field        | Type     | Required | Description |
+| ------------ | -------- | -------- | ----------- |
+| `class_id`   | `string` | Yes      | Class ID |
+| `student_id` | `string` | No       | Student ID (defaults to requesting user's ID) |
+| `title`      | `string` | No       | Custom title (defaults to `"New Conversation"`) |
+
+**Response (201):**
+
+```json
+{
+  "conversation_id": 1,
+  "title": "New Conversation",
+  "student_id": "abc-123",
+  "class_id": "5",
+  "started_at": "1785987600000"
+}
+```
+
+---
+
+#### `PATCH /conversations/:conversationId`
+
+Updates the title of an existing conversation.
+
+**Request Body:**
+
+```json
+{
+  "title": "Updated Conversation Title"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "conversation_id": 1,
+  "title": "Updated Conversation Title",
+  "student_id": "abc-123",
+  "class_id": "5",
+  "started_at": "1785987600000"
+}
+```
 
 ---
 
@@ -414,4 +495,6 @@ Health-check endpoint. Returns:
 1. The frontend authenticates the user via **Supabase Auth** and obtains a JWT.
 2. Every API request includes the JWT as `Authorization: Bearer <token>`.
 3. The backend validates the token server-side using `supabase.auth.getUser(token)`.
-4. The Supabase client is initialized with the **service-role key**, allowing it to bypass Row-Level Security for privileged operations (e.g. deleting underage users).
+4. Request bodies are validated using **Zod** schemas in [schemas/](file:///c:/Users/Andre/Development/gotutor-ai/backend/schemas).
+5. Centralized error handling is performed via [middleware/errorHandler.middleware.ts](file:///c:/Users/Andre/Development/gotutor-ai/backend/middleware/errorHandler.middleware.ts).
+6. The Supabase client is initialized with the **service-role key**, allowing it to bypass Row-Level Security for privileged operations (e.g. deleting underage users).

@@ -1,12 +1,110 @@
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { MembershipRepository } from '../repositories/membership.repository';
-import { ForbiddenError } from '../errors/AppError';
+import { MessageRepository } from '../repositories/message.repository';
+import { ForbiddenError, NotFoundError, AppError } from '../errors/AppError';
+import * as fs from 'fs';
+import * as path from 'path';
+const pdfParseModule = require('pdf-parse');
+
+function getSystemPrompt(): string {
+    try {
+        const promptPath = path.join(__dirname, '../prompts/tutor.txt');
+        if (fs.existsSync(promptPath)) {
+            return fs.readFileSync(promptPath, 'utf-8').trim();
+        }
+    } catch (e) {
+        console.warn('[System Prompt] Error reading prompts/tutor.txt:', e);
+    }
+    return process.env.SYSTEM_PROMPT || '';
+}
+
+async function parsePdfBuffer(buffer: Buffer): Promise<string> {
+    if (typeof pdfParseModule === 'function') {
+        const res = await pdfParseModule(buffer);
+        return res?.text ? res.text.trim() : '';
+    } else if (pdfParseModule?.PDFParse) {
+        const parser = new pdfParseModule.PDFParse({ data: buffer });
+        const res = await parser.getText();
+        if (typeof res === 'string') return res.trim();
+        if (res?.text) return res.text.trim();
+        if (Array.isArray(res?.pages)) return res.pages.map((p: any) => p.text || '').join('\n').trim();
+    } else if (typeof pdfParseModule?.default === 'function') {
+        const res = await pdfParseModule.default(buffer);
+        return res?.text ? res.text.trim() : '';
+    }
+    return '';
+}
+
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
+async function extractDocumentText(url: string, fileName?: string, fileType?: string): Promise<string> {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new AppError(`Unable to fetch attached file "${fileName || 'document'}"`, 400);
+    }
+
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES) {
+        throw new AppError(`File "${fileName || 'document'}" exceeds the 50MB size limit.`, 400);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_FILE_SIZE_BYTES) {
+        throw new AppError(`File "${fileName || 'document'}" exceeds the 50MB size limit.`, 400);
+    }
+
+    const isPdf = (fileType && fileType.toLowerCase().includes('pdf')) || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+
+    if (isPdf) {
+        const buffer = Buffer.from(arrayBuffer);
+        const text = await parsePdfBuffer(buffer);
+        if (text) {
+            return `[Extracted Content of PDF "${fileName || 'document.pdf'}"]:\n---\n${text}\n---`;
+        }
+        throw new AppError(`PDF file "${fileName || 'document.pdf'}" contains no extractable text.`, 400);
+    } else {
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(arrayBuffer).trim();
+        if (text) {
+            return `[Extracted Content of Document "${fileName || 'Document'}"]:\n---\n${text}\n---`;
+        }
+        throw new AppError(`Document "${fileName || 'Document'}" is empty.`, 400);
+    }
+}
 
 export class ConversationService {
     constructor(
         private conversationRepo: ConversationRepository,
         private membershipRepo: MembershipRepository,
+        private messageRepo: MessageRepository,
     ) {}
+
+    async createConversation(requesterId: string, studentId: string, classId: string, customTitle?: string) {
+        const title = customTitle || "New Conversation";
+        const startedAt = new Date().toISOString();
+
+        if (studentId !== requesterId) {
+            throw new ForbiddenError('Access denied: You cannot create conversations as another user');
+        }
+
+        return await this.conversationRepo.create(title, studentId, classId, startedAt);
+    }
+
+    async updateConversationTitle(requesterId: string, conversationId: number | string, title: string) {
+        const conversation = await this.conversationRepo.findById(conversationId);
+        if (!conversation) {
+            throw new NotFoundError('Conversation not found');
+        }
+
+        if (conversation.student_id !== requesterId) {
+            const isSupervisor = await this.membershipRepo.isSupervisor(requesterId, conversation.class_id);
+            if (!isSupervisor) {
+                throw new ForbiddenError('Access denied: You cannot update this conversation');
+            }
+        }
+
+        return await this.conversationRepo.updateTitle(conversationId, title);
+    }
 
     async getConversations(requesterId: string, classId: string, targetStudentId?: string) {
         const studentId = targetStudentId || requesterId;
@@ -24,5 +122,370 @@ export class ConversationService {
         }
 
         return await this.conversationRepo.findByStudentAndClass(studentId, classId);
+    }
+
+    async getConversationDetail(requesterId: string, conversationId: number | string) {
+        const conversation = await this.conversationRepo.findById(conversationId);
+        if (!conversation) {
+            throw new NotFoundError('Conversation not found');
+        }
+
+        if (conversation.student_id !== requesterId) {
+            const isSupervisor = await this.membershipRepo.isSupervisor(requesterId, conversation.class_id);
+            if (!isSupervisor) {
+                throw new ForbiddenError('Access denied: You do not have access to this conversation');
+            }
+        }
+
+        return conversation;
+    }
+
+    async getMessages(requesterId: string, conversationId: number | string) {
+        await this.getConversationDetail(requesterId, conversationId);
+        return await this.messageRepo.findByConversationId(conversationId);
+    }
+
+    async deleteConversation(requesterId: string, conversationId: number | string) {
+        const conversation = await this.conversationRepo.findById(conversationId);
+        if (!conversation) {
+            throw new NotFoundError('Conversation not found');
+        }
+
+        const isOwner = conversation.student_id === requesterId;
+
+        if (!isOwner) {
+            const requesterIsSupervisor = await this.membershipRepo.isSupervisor(requesterId, conversation.class_id);
+            if (!requesterIsSupervisor) {
+                throw new ForbiddenError('Access denied: Only the conversation owner or a class supervisor can delete this conversation');
+            }
+
+            const ownerIsSupervisor = await this.membershipRepo.isSupervisor(conversation.student_id, conversation.class_id);
+            if (ownerIsSupervisor) {
+                throw new ForbiddenError('Access denied: Supervisors cannot delete conversations belonging to another supervisor');
+            }
+        }
+
+        // Recursively delete associated messages first
+        await this.messageRepo.deleteByConversationIds([conversationId]);
+
+        // Then delete the conversation row
+        await this.conversationRepo.deleteById(conversationId);
+
+        return { message: 'Conversation deleted successfully' };
+    }
+
+    async sendMessageStream(
+        requesterId: string, 
+        conversationId: number | string, 
+        userContent: string, 
+        onChunk: (chunk: string) => void,
+        attachmentUrl?: string,
+        attachmentName?: string,
+        attachmentType?: string,
+        signal?: AbortSignal,
+    ) {
+        const conversation = await this.conversationRepo.findById(conversationId);
+        if (!conversation) {
+            throw new NotFoundError('Conversation not found');
+        }
+
+        if (conversation.student_id !== requesterId) {
+            throw new ForbiddenError('Access denied: Only the owner of this conversation can send messages');
+        }
+
+        await this.messageRepo.create(
+            conversationId, 
+            'user', 
+            userContent, 
+            attachmentUrl, 
+            attachmentName, 
+            attachmentType
+        );
+
+        const history = await this.messageRepo.findByConversationId(conversationId);
+        const RECENT_MESSAGE_LIMIT = 25;
+        const recentHistory = history.length > RECENT_MESSAGE_LIMIT
+            ? history.slice(-RECENT_MESSAGE_LIMIT)
+            : history;
+
+        const formattedMessages = await Promise.all(recentHistory.map(async m => {
+            if (m.attachment_url) {
+                if (m.attachment_type?.startsWith('image/')) {
+                    return {
+                        role: m.role === 'assistant' ? 'assistant' : 'user',
+                        content: [
+                            { type: 'text', text: m.content || 'Attached image' },
+                            { type: 'image_url', image_url: { url: m.attachment_url } }
+                        ]
+                    };
+                } else {
+                    const docText = await extractDocumentText(m.attachment_url, m.attachment_name, m.attachment_type);
+                    const fullPrompt = m.content ? `${m.content}\n\n${docText}` : docText;
+                    return {
+                        role: m.role === 'assistant' ? 'assistant' : 'user',
+                        content: fullPrompt,
+                    };
+                }
+            }
+            return {
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content || '',
+            };
+        }));
+
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (!apiKey) {
+            throw new AppError('OpenRouter API key missing', 500);
+        }
+
+        const systemPrompt = getSystemPrompt();
+        const messages = [
+            ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+            ...(conversation.summary ? [{ role: 'system', content: `[Context summary of earlier conversation]:\n${conversation.summary}` }] : []),
+            ...formattedMessages,
+        ];
+
+        const maxTokens = parseInt(process.env.OPENROUTER_MAX_TOKENS || '800', 10);
+
+        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
+                'X-Title': 'GoTutor.ai',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: process.env.OPENROUTER_MODEL || 'openai/gpt-5.6-luna',
+                session_id: `conv_${conversationId}`,
+                messages,
+                max_tokens: maxTokens,
+                stream: true,
+                stream_options: { include_usage: true },
+                reasoning: { effort: 'low' },
+            }),
+            signal,
+        });
+
+        if (!openRouterRes.ok || !openRouterRes.body) {
+            const errText = await openRouterRes.text();
+            console.error('[OpenRouter Error Dump] Status:', openRouterRes.status, 'Body:', errText);
+            throw new AppError(`An error occurred and your response could not be completed (Code: ${openRouterRes.status})`, openRouterRes.status || 502);
+        }
+
+        let fullAssistantText = '';
+        const reader = openRouterRes.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        let isStreamDone = false;
+        let isFirstChunk = true;
+
+        try {
+            while (!isStreamDone) {
+                if (signal?.aborted) {
+                    break;
+                }
+
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                    const jsonStr = trimmed.replace(/^data:\s*/, '');
+                    if (jsonStr === '[DONE]') {
+                        isStreamDone = true;
+                        break;
+                    }
+
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        if (parsed.usage) {
+                            const { prompt_tokens, completion_tokens, prompt_tokens_details } = parsed.usage;
+                            const cached = prompt_tokens_details?.cached_tokens ?? 0;
+                            console.log(`[Token Usage] Conv: ${conversationId} | Prompt: ${prompt_tokens} (Cached: ${cached}) | Completion: ${completion_tokens}`);
+                        }
+
+                        let chunkText = parsed.choices?.[0]?.delta?.content || parsed.text || '';
+                        if (chunkText) {
+                            if (isFirstChunk) {
+                                chunkText = chunkText.replace(/^[\r\n]+/, '');
+                                if (chunkText) {
+                                    isFirstChunk = false;
+                                }
+                            }
+                            if (chunkText) {
+                                fullAssistantText += chunkText;
+                                onChunk(chunkText);
+                            }
+                        }
+                    } catch (e) {
+                        // ignore partial JSON parse error
+                    }
+                }
+            }
+        } catch (streamErr: any) {
+            if (signal?.aborted || streamErr.name === 'AbortError') {
+                console.log(`[Stream Aborted] Client cancelled stream for conversation ${conversationId}`);
+            } else {
+                throw streamErr;
+            }
+        } finally {
+            try {
+                reader.releaseLock();
+            } catch {}
+        }
+
+        // Save assistant response to database
+        if (fullAssistantText) {
+            await this.messageRepo.create(conversationId, 'assistant', fullAssistantText);
+            await this.conversationRepo.touchLastActive(conversationId);
+        }
+
+        if (signal?.aborted) {
+            return null;
+        }
+
+        // Asynchronously update summary when conversation history exceeds limit
+        if (history.length >= RECENT_MESSAGE_LIMIT && history.length % 5 === 0) {
+            this.generateSummary(conversationId, history, conversation.summary, apiKey).catch(err => {
+                console.warn('[Summary Gen Error]', err);
+            });
+        }
+
+        // Auto-generate conversation title if the title is still default
+        const rawTitleStr = conversation?.title ? String(conversation.title).trim().toLowerCase() : '';
+        const isDefaultTitle = !rawTitleStr || rawTitleStr === 'new conversation' || rawTitleStr === 'conversation';
+        
+        console.log('[Title Gen Check]', { rawTitle: conversation?.title, isDefaultTitle, assistantLength: fullAssistantText?.length });
+        
+        if (isDefaultTitle && fullAssistantText) {
+            const userMsg = userContent;
+
+            try {
+                console.log('[Title Gen] Sending title generation request to OpenRouter...');
+                const titleRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'HTTP-Referer': process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
+                        'X-Title': 'GoTutor.ai',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: process.env.OPENROUTER_TITLE_MODEL || 'google/gemma-3-4b-it',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'Output ONLY a 2-5 word title for the user prompt. Never output options, reasoning, thoughts, or preamble. Just the title text.'
+                            },
+                            {
+                                role: 'user',
+                                content: `User prompt: "${userMsg}"`
+                            }
+                        ],
+                        max_tokens: 20
+                    }),
+                });
+
+                console.log('[Title Gen] Response status:', titleRes.status, titleRes.ok);
+
+                if (titleRes.ok) {
+                    const titleData = await titleRes.json();
+                    console.log('[Title Gen] Response body:', JSON.stringify(titleData));
+                    const choice = titleData.choices?.[0];
+                    let rawTitle = choice?.message?.content?.trim();
+
+                    if (!rawTitle) {
+                        const cleanMsg = userMsg.replace(/[^\w\s]/g, '').trim();
+                        const words = cleanMsg.split(/\s+/).filter(Boolean);
+                        if (words.length > 0) {
+                            rawTitle = words.slice(0, 5).join(' ');
+                        }
+                    }
+
+                    if (rawTitle) {
+                        rawTitle = rawTitle
+                            .replace(/^["']|["']$/g, '')
+                            .replace(/^(title|subject):\s*/i, '')
+                            .replace(/^(the user|the assistant|here is|summary):\s*/i, '')
+                            .trim();
+                        const words = rawTitle.split(/\s+/);
+                        if (words.length > 6) {
+                            rawTitle = words.slice(0, 6).join(' ');
+                        }
+                        // Capitalize first letter of words for clean UI title format
+                        rawTitle = rawTitle.replace(/\b\w/g, (l: string) => l.toUpperCase());
+                        console.log('[Title Gen Success] New title:', rawTitle);
+                        await this.conversationRepo.updateTitle(conversationId, rawTitle);
+                        return { fullContent: fullAssistantText, newTitle: rawTitle };
+                    } else {
+                        console.warn('[Title Gen] choice.message.content was empty/null');
+                    }
+                } else {
+                    const titleErrText = await titleRes.text();
+                    console.warn(`[Title Gen Error Dump] Status ${titleRes.status}:`, titleErrText);
+                }
+            } catch (err) {
+                console.warn('[Title Gen] Exception thrown:', err);
+            }
+        }
+
+        return { fullContent: fullAssistantText };
+    }
+
+    private async generateSummary(
+        conversationId: number | string,
+        history: any[],
+        existingSummary: string | null | undefined,
+        apiKey: string
+    ) {
+        try {
+            const olderHistory = history.slice(0, -15);
+            const olderTurns = olderHistory.map(m => `${m.role}: ${m.content || ''}`).join('\n');
+            const summaryPrompt = existingSummary
+                ? `Existing summary:\n${existingSummary}\n\nAdditional conversation turns:\n${olderTurns}\n\nUpdate the concise bulleted summary of pedagogical context, student understanding, problem progress, and sticking points.`
+                : `Conversation turns:\n${olderTurns}\n\nWrite a concise bulleted summary of pedagogical context, student understanding, problem progress, and sticking points.`;
+
+            const summaryRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
+                    'X-Title': 'GoTutor.ai',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: process.env.OPENROUTER_MODEL || 'openai/gpt-5.6-luna',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a pedagogical summarizer. Maintain a dense, factual summary of the student\'s progress, solved problems, misconceptions, and current focus. Keep it under 200 words.'
+                        },
+                        {
+                            role: 'user',
+                            content: summaryPrompt
+                        }
+                    ],
+                    max_tokens: 300,
+                }),
+            });
+
+            if (summaryRes.ok) {
+                const data = await summaryRes.json();
+                const newSummary = data.choices?.[0]?.message?.content?.trim();
+                if (newSummary) {
+                    console.log(`[Summary Gen Success] Updated summary for conv ${conversationId}`);
+                    await this.conversationRepo.updateSummary(conversationId, newSummary);
+                }
+            }
+        } catch (e) {
+            console.warn('[Summary Gen Exception]', e);
+        }
     }
 }

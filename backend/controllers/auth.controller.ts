@@ -20,4 +20,9 @@ export class AuthController {
         const profile = await this.authService.getProfile(req.userId);
         res.status(200).json(profile);
     };
+
+    checkName = async (req: Request, res: Response): Promise<void> => {
+        const result = await this.authService.checkName(req.userId);
+        res.status(200).json(result);
+    };
 }

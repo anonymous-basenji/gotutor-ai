@@ -1,0 +1,282 @@
+.conversation-page {
+    background: linear-gradient(45deg, rgb(0, 147, 161), rgb(12, 0, 146));
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: white;
+}
+
+.conversation-top-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.8rem 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+}
+
+.conversation-top-bar .user-badge {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    margin: 0 !important;
+    z-index: 1;
+}
+
+.top-bar-left {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 1.2rem !important;
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-back-btn {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.chat-back-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateX(-2px);
+}
+
+.conversation-title {
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    display: inline-block !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.conversation-main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 1rem 1rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.no-messages-notice {
+    margin: auto;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.1rem;
+}
+
+.submit-form {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+
+.attachment-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 0.9rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attachment-icon {
+    width: 20px;
+    height: 20px;
+    filter: invert(1);
+}
+
+.attachment-icon-small {
+    width: 16px;
+    height: 16px;
+    filter: invert(1);
+}
+
+.attachment-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.attachment-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.file-preview-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(0, 180, 219, 0.25);
+    border: 1px solid rgba(0, 180, 219, 0.5);
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+    color: #e0f7fa;
+    font-size: 0.88rem;
+    align-self: flex-start;
+}
+
+.remove-file-btn {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 2px;
+}
+
+.remove-file-btn:hover {
+    color: #ff3333;
+}
+
+.chat-input {
+    flex: 1;
+    padding: 0.85rem 1.2rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.chat-input:focus {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 10px rgba(0, 180, 219, 0.3);
+}
+
+.chat-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.submit-btn {
+    padding: 0.85rem 1.8rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(135deg, #00b4db, #0083b0);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 131, 176, 0.4);
+}
+
+.submit-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 180, 219, 0.6);
+}
+
+.submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.submit-btn.stop-btn {
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.submit-btn.stop-btn:hover {
+    background: linear-gradient(135deg, #f56565, #e53e3e);
+    box-shadow: 0 6px 16px rgba(229, 62, 62, 0.6);
+}
+
+.disclaimer {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.85rem;
+    padding-bottom: 0.5rem;
+}
+
+.disclaimer p {
+    margin: 0;
+}
+
+.error-banner {
+    background: rgba(255, 74, 74, 0.25);
+    border: 1px solid rgba(255, 74, 74, 0.5);
+    color: #ff8888;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.read-only-banner {
+    background: rgba(255, 193, 7, 0.18);
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    color: #ffe082;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .conversation-main-content {
+        width: 95%;
+        padding: 1rem 0.5rem;
+    }
+    
+    .conversation-top-bar {
+        padding: 0.8rem 1rem;
+    }
+}

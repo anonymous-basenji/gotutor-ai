@@ -8,9 +8,10 @@ import AddStudentForm from './AddStudentForm';
 import './ClassPage.css'
 
 interface Conversation {
-    conversation_id: number;
+    conversation_id: number | string;
+    title?: string;
     student_id: string;
-    class_id: number;
+    class_id: number | string;
     started_at: string;
 }
 
@@ -43,7 +44,12 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
 
             if (response.ok) {
                 const data: Conversation[] = await response.json();
-                setConversations(data);
+                const sorted = [...data].sort((a, b) => {
+                    const timeA = a.started_at ? new Date(a.started_at).getTime() : Number(a.conversation_id) || 0;
+                    const timeB = b.started_at ? new Date(b.started_at).getTime() : Number(b.conversation_id) || 0;
+                    return timeB - timeA;
+                });
+                setConversations(sorted);
             } else {
                 console.error('Failed to fetch conversations:', response.status);
             }
@@ -164,6 +170,63 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
         }
     };
 
+    const handleDeleteConversation = async (conversationId: number | string) => {
+        if (!window.confirm('Are you sure you want to delete this conversation? This will permanently remove all messages inside it.')) {
+            return;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/conversations/${conversationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                setConversations(prev => prev.filter(c => c.conversation_id !== conversationId));
+            } else {
+                const errData = await response.json().catch(() => ({}));
+                window.alert(errData.error || 'Failed to delete conversation.');
+            }
+        } catch (e) {
+            console.error('Error deleting conversation:', e);
+            window.alert('An error occurred while deleting the conversation.');
+        }
+    };
+
+    const handleCreateConvo = async () => {
+        if (!clsData) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/conversations`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ class_id: clsData.class_id })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.conversation_id) {
+                    navigate(`/conversation/${data.conversation_id}`);
+                }
+            } else {
+                console.error('Failed to create conversation:', response.status);
+            }
+        } catch (e) {
+            console.error('Error creating conversation:', e);
+        }
+    };
+
     if (!clsData) {
         return null;
     }
@@ -220,25 +283,43 @@ function ClassPageSignedIn({ clsData, userName, isSupervisor, currUserId, onRefr
                     </form>
                 )}
                 <h3>Welcome to your course, {userName}{isSupervisor && " (Supervisor)"}</h3>
-                <button className="back-btn" onClick={() => navigate('/user-dashboard')}>← Back to Dashboard</button>
+                <button className="class-page-back-btn" onClick={() => navigate('/user-dashboard')} aria-label="Back to Dashboard">
+                    ←<span className="back-btn-text"> Back to Dashboard</span>
+                </button>
             </div>
             
             <div className='class-page-layout'>
                 <div className='conversations-container'>
-                    {isSupervisor && !selectedMember ? (
-                        <h2>Select a student or supervisor to view their conversations:</h2>
-                    ) : (
-                        <h2>
-                            {isSupervisor && selectedMember 
-                                ? `Conversations for ${selectedMember.name}${selectedMember.user_id === currUserId ? " (You)" : ""}:` 
-                                : 'Your conversations:'
-                            }
-                        </h2>
-                    )}
+                    <div className='conversations-container-header'>
+                        {isSupervisor && !selectedMember ? (
+                            <h2>Select a student or supervisor to view their conversations:</h2>
+                        ) : (
+                            <h2>
+                                {isSupervisor && selectedMember 
+                                    ? `Conversations for ${selectedMember.name}${selectedMember.user_id === currUserId ? " (You)" : ""}:` 
+                                    : 'Your conversations:'
+                                }
+                            </h2>
+                        )}
+
+                        <button className='new-convo-button' onClick={() => handleCreateConvo()}>+ New</button>
+                    </div>
                     
-                    {conversations.map(cnv => (
-                        <ConversationCard key={cnv.conversation_id} title={new Date(cnv.started_at).toLocaleString()}/>
-                    ))}
+                    {conversations.map(cnv => {
+                        const isOwner = cnv.student_id === currUserId;
+                        const targetIsSupervisor = selectedMember && selectedMember.role === 'supervisor';
+                        const canDelete = isOwner || (isSupervisor && selectedMember && !targetIsSupervisor);
+
+                        return (
+                            <ConversationCard 
+                                key={cnv.conversation_id} 
+                                conversationId={cnv.conversation_id} 
+                                title={cnv.title || "New Conversation"}
+                                canDelete={canDelete}
+                                onDelete={() => handleDeleteConversation(cnv.conversation_id)}
+                            />
+                        );
+                    })}
                     
                     {(!isSupervisor || selectedMember) && conversations.length === 0 && (
                         <p className='no-conversations-msg'>No conversations started yet.</p>

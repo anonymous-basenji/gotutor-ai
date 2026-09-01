@@ -22,7 +22,7 @@ function UserBadge() {
 
     return(
         <div className='user-badge'>
-            <p>{name}</p>
+            <p className='user-badge-name'>{name}</p>
             <button className="sign-out-btn" onClick={handleSignOut}>Sign-out</button>
         </div>
     );

@@ -6,6 +6,7 @@ export const createAuthRoutes = (controller: AuthController, requireAuth: Reques
 
     router.post('/sync-user', requireAuth, controller.syncUser);
     router.get('/me', requireAuth, controller.getProfile);
+    router.post('/check-name', requireAuth, controller.checkName);
 
     return router;
 };
