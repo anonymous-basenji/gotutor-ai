@@ -193,10 +193,16 @@ export class ConversationService {
             throw new ForbiddenError('Access denied: Only the owner of this conversation can send messages');
         }
 
+        let finalUserContent = userContent;
+        if (attachmentUrl && !attachmentType?.startsWith('image/')) {
+            const docText = await extractDocumentText(attachmentUrl, attachmentName, attachmentType);
+            finalUserContent = userContent ? `${userContent}\n\n${docText}` : docText;
+        }
+
         await this.messageRepo.create(
             conversationId, 
             'user', 
-            userContent, 
+            finalUserContent, 
             attachmentUrl, 
             attachmentName, 
             attachmentType
@@ -208,30 +214,21 @@ export class ConversationService {
             ? history.slice(-RECENT_MESSAGE_LIMIT)
             : history;
 
-        const formattedMessages = await Promise.all(recentHistory.map(async m => {
-            if (m.attachment_url) {
-                if (m.attachment_type?.startsWith('image/')) {
-                    return {
-                        role: m.role === 'assistant' ? 'assistant' : 'user',
-                        content: [
-                            { type: 'text', text: m.content || 'Attached image' },
-                            { type: 'image_url', image_url: { url: m.attachment_url } }
-                        ]
-                    };
-                } else {
-                    const docText = await extractDocumentText(m.attachment_url, m.attachment_name, m.attachment_type);
-                    const fullPrompt = m.content ? `${m.content}\n\n${docText}` : docText;
-                    return {
-                        role: m.role === 'assistant' ? 'assistant' : 'user',
-                        content: fullPrompt,
-                    };
-                }
+        const formattedMessages = recentHistory.map(m => {
+            if (m.attachment_url && m.attachment_type?.startsWith('image/')) {
+                return {
+                    role: m.role === 'assistant' ? 'assistant' : 'user',
+                    content: [
+                        { type: 'text', text: m.content || 'Attached image' },
+                        { type: 'image_url', image_url: { url: m.attachment_url } }
+                    ]
+                };
             }
             return {
                 role: m.role === 'assistant' ? 'assistant' : 'user',
                 content: m.content || '',
             };
-        }));
+        });
 
         const apiKey = process.env.OPENROUTER_API_KEY;
         if (!apiKey) {
