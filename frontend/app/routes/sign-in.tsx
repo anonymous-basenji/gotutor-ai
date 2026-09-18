@@ -40,22 +40,21 @@ export default function SignIn() {
                 return;
             }
 
-            const { data, error } = await supabase
-                .from('User')
-                .select('user_id')
-                .eq('user_id', userCtx.user.id)
-                .maybeSingle();
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) return;
 
-            if(error) {
-                console.error("Error checking user profile", error);
-                return;
-            };
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-            if(!data) {
+            if (response.status === 404) {
                 setShowAgeForm(true);
-            } else {
+            } else if (response.ok) {
                 navigate('/user-dashboard');
-            };
+            } else {
+                console.error("Error checking user profile", response.status);
+            }
         };
 
         if (userCtx && !userCtx.loading && userCtx.user) {

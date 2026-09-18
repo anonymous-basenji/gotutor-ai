@@ -20,8 +20,20 @@ export default function UserDashboard() {
 
     useEffect(() => {
         if (userCtx?.user) {
-            supabase.from('User').select('user_id').eq('user_id', userCtx.user.id).maybeSingle()
-                .then(({ data }) => setHasProfile(!!data));
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                const token = session?.access_token;
+                if (!token) {
+                    setHasProfile(false);
+                    return;
+                }
+                fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(res => {
+                    setHasProfile(res.ok);
+                }).catch(() => {
+                    setHasProfile(false);
+                });
+            });
         } else if (!userCtx?.loading) {
             setHasProfile(false);
         }
