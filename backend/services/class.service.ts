@@ -15,8 +15,13 @@ export class ClassService {
         private messageRepo: MessageRepository,
     ) {}
 
-    async createClass(name: string) {
-        return await this.classRepo.create(name);
+    async createClass(userId: string, name: string) {
+        const classData = await this.classRepo.create(name);
+        const createdClass = Array.isArray(classData) ? classData[0] : classData;
+        if (createdClass?.class_id) {
+            await this.membershipRepo.addMember(userId, createdClass.class_id, 'supervisor');
+        }
+        return classData;
     }
 
     async getUserClasses(userId: string) {
@@ -80,9 +85,6 @@ export class ClassService {
         };
     }
 
-    async addSelfToClass(userId: string, classId: string, role: string) {
-        return await this.membershipRepo.addMember(userId, classId, role);
-    }
 
     async addUserByEmail(requesterId: string, classId: string, email: string, role: string) {
         const isSupervisor = await this.membershipRepo.isSupervisor(requesterId, classId);

@@ -3,7 +3,6 @@ import { ClassService } from '../services/class.service';
 import { BadRequestError } from '../errors/AppError';
 import {
     createClassSchema,
-    addUserToClassSchema,
     addUserByEmailSchema,
     removeUserSchema,
     deleteClassSchema,
@@ -15,7 +14,7 @@ export class ClassController {
 
     createClass = async (req: Request, res: Response): Promise<void> => {
         const { name } = createClassSchema.parse(req.body);
-        const result = await this.classService.createClass(name);
+        const result = await this.classService.createClass(req.userId, name);
         res.status(201).json(result);
     };
 
@@ -28,12 +27,6 @@ export class ClassController {
         const classId = req.params.id as string;
         const result = await this.classService.getClassDetail(req.userId, classId);
         res.status(200).json(result);
-    };
-
-    addUserToClass = async (req: Request, res: Response): Promise<void> => {
-        const { class_id, role } = addUserToClassSchema.parse(req.body);
-        const result = await this.classService.addSelfToClass(req.userId, class_id, role);
-        res.status(201).json(result);
     };
 
     addUserByEmail = async (req: Request, res: Response): Promise<void> => {

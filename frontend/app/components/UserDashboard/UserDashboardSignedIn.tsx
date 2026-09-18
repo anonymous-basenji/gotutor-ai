@@ -43,29 +43,9 @@ function UserDashboardSignedIn({ user }: { user: User }) {
         }
 
         if (response.ok) {
-            const data = await response.json();
-            await addCurrUserAsSupervisor(data[0].class_id);
             await fetchClasses();
         }        
     };
-
-    const addCurrUserAsSupervisor = async(classId: string) => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        try {
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/classes/add-user-to-class`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ class_id: classId, role: "supervisor" })
-            });
-        } catch(e) {
-            console.error("Error adding supervisor to class:", e);
-        }
-    }
 
     const fetchClasses = async() => {
         const { data: { session } } = await supabase.auth.getSession();

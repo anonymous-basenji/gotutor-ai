@@ -4,12 +4,6 @@ export const createClassSchema = z.object({
     name: z.string().trim().min(1, 'Class name is required'),
 });
 
-export const addUserToClassSchema = z.object({
-    class_id: z.coerce.string({ error: 'class_id is required' }),
-    role: z.enum(['supervisor', 'student'], {
-        error: 'role must be one of: supervisor, student',
-    }),
-});
 
 export const addUserByEmailSchema = z.object({
     class_id: z.coerce.string({ error: 'class_id is required' }),
@@ -35,7 +29,6 @@ export const renameClassSchema = z.object({
 });
 
 export type CreateClassDTO = z.infer<typeof createClassSchema>;
-export type AddUserToClassDTO = z.infer<typeof addUserToClassSchema>;
 export type AddUserByEmailDTO = z.infer<typeof addUserByEmailSchema>;
 export type RemoveUserDTO = z.infer<typeof removeUserSchema>;
 export type DeleteClassDTO = z.infer<typeof deleteClassSchema>;
