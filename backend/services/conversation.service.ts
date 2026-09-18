@@ -37,8 +37,46 @@ async function parsePdfBuffer(buffer: Buffer): Promise<string> {
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
+function validateAttachmentUrl(urlStr: string): string {
+    let parsedUrl: URL;
+    try {
+        parsedUrl = new URL(urlStr);
+    } catch {
+        throw new AppError('Invalid attachment URL format', 400);
+    }
+
+    if (parsedUrl.protocol !== 'https:') {
+        throw new AppError('Only HTTPS attachment URLs are allowed', 400);
+    }
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+    let allowedHost = '';
+    try {
+        allowedHost = new URL(supabaseUrl).hostname.toLowerCase();
+    } catch {}
+
+    const incomingHost = parsedUrl.hostname.toLowerCase();
+
+    // Check if host matches configured Supabase project domain or standard supabase.co domain
+    const isSupabaseHost = (allowedHost && incomingHost === allowedHost) || incomingHost.endsWith('.supabase.co');
+
+    // Explicitly block localhost and private / metadata IP ranges
+    const blockedHosts = ['localhost', '127.0.0.1', '169.254.169.254', 'metadata.google.internal'];
+    const isBlocked = blockedHosts.includes(incomingHost) 
+        || incomingHost.startsWith('10.')
+        || incomingHost.startsWith('192.168.')
+        || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(incomingHost);
+
+    if (!isSupabaseHost || isBlocked) {
+        throw new AppError('Attachment URL must point to trusted Supabase storage', 400);
+    }
+
+    return parsedUrl.toString();
+}
+
 async function extractDocumentText(url: string, fileName?: string, fileType?: string): Promise<string> {
-    const response = await fetch(url);
+    const safeUrl = validateAttachmentUrl(url);
+    const response = await fetch(safeUrl);
     if (!response.ok) {
         throw new AppError(`Unable to fetch attached file "${fileName || 'document'}"`, 400);
     }
@@ -191,6 +229,10 @@ export class ConversationService {
 
         if (conversation.student_id !== requesterId) {
             throw new ForbiddenError('Access denied: Only the owner of this conversation can send messages');
+        }
+
+        if (attachmentUrl) {
+            validateAttachmentUrl(attachmentUrl);
         }
 
         let finalUserContent = userContent;
