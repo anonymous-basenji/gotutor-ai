@@ -125,6 +125,13 @@ export class ClassService {
             if (!isSupervisor) {
                 throw new ForbiddenError('Access denied: Only supervisors can remove students');
             }
+
+            const conversations = await this.conversationRepo.findByStudentAndClass(targetUserId, classId);
+            const convIds = conversations?.map(c => c.conversation_id) || [];
+            if (convIds.length > 0) {
+                await this.messageRepo.deleteByConversationIds(convIds);
+                await this.conversationRepo.deleteByIds(convIds);
+            }
         }
 
         await this.membershipRepo.removeMember(targetUserId, classId, role);
