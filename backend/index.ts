@@ -42,12 +42,14 @@ const conversationController = new ConversationController(conversationService);
 
 // Express App
 export const app = express();
+const allowedOrigins = ['http://localhost:5173'];
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || origin.includes('localhost') || origin.includes('ngrok')) {
+        if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            callback(null, process.env.VITE_FRONTEND_URL || true);
+            callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
