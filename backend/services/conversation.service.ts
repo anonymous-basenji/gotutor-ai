@@ -125,6 +125,11 @@ export class ConversationService {
             throw new ForbiddenError('Access denied: You cannot create conversations as another user');
         }
 
+        const role = await this.membershipRepo.getMemberRole(requesterId, classId);
+        if (!role) {
+            throw new ForbiddenError('Access denied: You are not a member of this class');
+        }
+
         return await this.conversationRepo.create(title, studentId, classId, startedAt);
     }
 
