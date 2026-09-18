@@ -13,10 +13,8 @@ export const addUserByEmailSchema = z.object({
 
 export const removeUserSchema = z.object({
     class_id: z.coerce.string({ error: 'class_id is required' }),
-    user_id: z.string().optional(),
-    target_user_id: z.string().optional(),
-    student_id: z.string().optional(),
-    role: z.string().default('student'),
+    user_id: z.string().min(1, 'user_id is required'),
+    role: z.enum(['supervisor', 'student']).default('student'),
 });
 
 export const deleteClassSchema = z.object({

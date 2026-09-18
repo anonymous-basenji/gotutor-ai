@@ -38,14 +38,9 @@ export class ClassController {
     removeUser = async (req: Request, res: Response): Promise<void> => {
         const data = removeUserSchema.parse(req.body);
 
-        const targetUserId = data.user_id || data.target_user_id || data.student_id;
-        if (!targetUserId) {
-            throw new BadRequestError('class_id and user_id are required');
-        }
-
         const result = await this.classService.removeUser(
             req.userId,
-            targetUserId,
+            data.user_id,
             data.class_id,
             data.role,
         );
